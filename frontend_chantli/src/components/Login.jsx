@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // Agregamos Link
 import { User, Lock, Home } from 'lucide-react';
+
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -15,8 +17,7 @@ const Login = () => {
     setError('');
     
     try {
-      // Petición al Backend Django
-      const response = await fetch('http://127.0.0.1:8000/api-token-auth/', {
+      const response = await fetch(`${apiUrl}/api-token-auth/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -34,6 +35,12 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    // Aquí redirigimos al usuario al endpoint de Django que inicia el flujo de Google
+    // Por ejemplo, si usas django-allauth o tu propia vista:
+    window.location.href = `${apiUrl}/google-login/`; 
   };
 
   return (
@@ -79,6 +86,11 @@ const Login = () => {
                 <div>
                     <div className="flex items-center justify-between mb-1">
                         <label className="block text-sm font-medium text-gray-700">Contraseña</label>
+                        <div className="text-sm">
+                          <a href="#" className="font-semibold text-brand-600 hover:text-brand-500">
+                            ¿Olvidaste tu contraseña?
+                          </a>
+                        </div>
                     </div>
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -102,7 +114,7 @@ const Login = () => {
                     </div>
                 )}
 
-                {/* Botón de Acción */}
+                {/* Botón de Iniciar Sesión */}
                 <button
                     type="submit"
                     disabled={loading}
@@ -119,6 +131,43 @@ const Login = () => {
                     ) : 'Iniciar Sesión'}
                 </button>
             </form>
+
+            {/* --- DIVIDER --- */}
+            <div className="mt-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">
+                    O continúa con
+                  </span>
+                </div>
+              </div>
+
+              {/* --- BOTÓN DE GOOGLE --- */}
+              <div className="mt-6">
+                <button
+                  onClick={handleGoogleLogin}
+                  type="button"
+                  className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-all active:scale-95"
+                >
+                  <svg className="h-5 w-5 mr-2" aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M12.0003 20.45c4.656 0 8.526-3.156 9.945-7.65h-9.945v-3.6h14.73c.18.9.27 1.845.27 2.805 0 8.085-6.03 12.45-12.45 12.45-6.63 0-12-5.37-12-12s5.37-12 12-12c3.24 0 6.18 1.185 8.46 3.12l-3.39 3.39c-1.35-1.14-3.135-1.71-5.07-1.71-4.005 0-7.26 3.255-7.26 7.26s3.255 7.26 7.26 7.26z" fill="currentColor" />
+                  </svg>
+                  Google
+                </button>
+              </div>
+            </div>
+
+            {/* --- LINK A REGISTRO --- */}
+            <p className="mt-10 text-center text-sm text-gray-500">
+              ¿No tienes cuenta?{' '}
+              <Link to="/register" className="font-semibold leading-6 text-brand-600 hover:text-brand-500">
+                Regístrate aquí
+              </Link>
+            </p>
+
         </div>
       </div>
     </div>

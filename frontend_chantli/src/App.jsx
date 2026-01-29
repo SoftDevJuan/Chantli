@@ -3,12 +3,14 @@ import Login from './components/Login';
 import Home from './components/Home';
 import CreateProperty from './components/CreateProperty';
 import PropertyDetail from './components/PropertyDetail';
+import Register from './components/Register';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/home" element={<Home />} />
         <Route path="/create" element={<CreateProperty />} />
         <Route path="/propiedad/:id" element={<PropertyDetail />} />
