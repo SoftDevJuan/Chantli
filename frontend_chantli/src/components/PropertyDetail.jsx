@@ -207,7 +207,7 @@ const PropertyDetail = () => {
             ) : (
                 <button 
                     onClick={() => setIsModalOpen(true)}
-                    className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-brand-200 transition-all active:scale-95"
+                    className="bg-brand-600 hover:bg-brand-700 text-black font-bold py-3 px-8 rounded-xl shadow-lg shadow-brand-200 transition-all active:scale-95"
                 >
                     Solicitar Renta
                 </button>
@@ -264,7 +264,7 @@ const PropertyDetail = () => {
                     <button 
                         type="submit" 
                         disabled={bookingLoading}
-                        className="w-full bg-brand-600 text-white font-bold py-4 rounded-xl mt-4 hover:bg-brand-700 transition disabled:opacity-50"
+                        className="w-full bg-brand-600 text-green-400 font-bold py-4 rounded-xl mt-4 hover:bg-brand-700 transition disabled:opacity-50"
                     >
                         {bookingLoading ? 'Enviando...' : 'Confirmar Solicitud'}
                     </button>

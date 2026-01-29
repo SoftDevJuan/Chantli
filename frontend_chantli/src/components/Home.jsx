@@ -153,7 +153,7 @@ const Home = () => {
       {/* --- BOTÓN FLOTANTE (FAB) --- */}
       <button 
         onClick={() => navigate('/create')}
-        className="fixed bottom-24 right-4 h-14 w-14 bg-brand-600 text-white rounded-full shadow-xl shadow-brand-200 flex items-center justify-center hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all z-40"
+        className="fixed bottom-24 right-4 h-14 w-14 bg-brand-600 text-gray-400 rounded-full shadow-xl shadow-brand-200 flex items-center justify-center hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all z-40"
       >
         <Plus className="h-8 w-8" />
       </button>
