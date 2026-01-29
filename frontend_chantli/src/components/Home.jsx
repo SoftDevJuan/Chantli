@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Search, Home as HomeIcon, Heart, MessageSquare, LogOut, Filter, Plus } from 'lucide-react';
+import { MapPin, Search, Home as HomeIcon, Heart, MessageSquare, LogOut, Filter, Plus, User, LayoutDashboard, Bell } from 'lucide-react';
 
 const Home = () => {
+  const [isHost, setIsHost] = useState(false);
   const [propiedades, setPropiedades] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -19,9 +20,10 @@ const Home = () => {
     const token = localStorage.getItem('chantli_token');
     // if (!token) { navigate('/'); return; } 
 
-    fetch('http://127.0.0.1:8000/api/propiedades/', {
-        headers: token ? { 'Authorization': `Token ${token}` } : {}
-    })
+    const headers = token ? { 'Authorization': `Token ${token}` } : {};
+
+    // 1. Cargar Propiedades
+    fetch('http://127.0.0.1:8000/api/propiedades/', { headers })
       .then(res => res.json())
       .then(data => {
           setPropiedades(data);
@@ -31,6 +33,20 @@ const Home = () => {
           console.error(err);
           setLoading(false);
       });
+
+    // 2. Cargar Usuario para verificar si es ANFITRIÓN
+    if (token) {
+        fetch('http://127.0.0.1:8000/api/me/', { headers })
+        .then(res => res.json())
+        .then(userData => {
+            // Verificamos el rol (puede venir directo o dentro de perfil)
+            if (userData.rol === 'anfitrion' || userData.perfil?.rol === 'anfitrion') {
+                setIsHost(true);
+            }
+        })
+        .catch(err => console.error("Error al verificar rol:", err));
+    }
+
   }, [navigate]);
 
   return (
@@ -39,14 +55,37 @@ const Home = () => {
       {/* --- HEADER SUPERIOR (Sticky) --- */}
       <div className="bg-white sticky top-0 z-30 px-4 py-3 shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
+            
+
             <div className="flex justify-between items-center mb-3">
+                
+                {/* --- IZQUIERDA: Ubicación --- */}
                 <div className="flex items-center text-brand-900 bg-brand-50 px-3 py-1 rounded-full">
                     <MapPin className="h-4 w-4 mr-1 text-brand-600" />
                     <span className="font-bold text-xs sm:text-sm">Guadalajara, ZMG</span>
                 </div>
-                {/* Avatar simple */}
-                <div className="h-9 w-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border border-brand-200 cursor-pointer hover:bg-brand-200 transition">
-                    U
+
+                {/* --- DERECHA: Grupo Notificaciones + Perfil --- */}
+                <div className="flex items-center gap-3">
+                    
+                    {/* Botón Notificaciones */}
+                    <button 
+                        onClick={() => navigate('/notifications')}
+                        className="p-2 bg-white rounded-full border border-gray-100 shadow-sm relative active:scale-95 transition-transform"
+                    >
+                        <Bell className="h-5 w-5 text-gray-600" />
+                        {/* Puntito rojo (puedes poner lógica condicional aquí luego) */}
+                        <span className="absolute top-1 right-2 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
+                    </button>
+
+                    {/* Avatar simple */}
+                    <div 
+                        onClick={() => navigate('/profile')} 
+                        className="h-9 w-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border border-brand-200 cursor-pointer hover:bg-brand-200 transition"
+                    >
+                        U
+                    </div>
+                    
                 </div>
             </div>
             
@@ -153,29 +192,54 @@ const Home = () => {
       {/* --- BOTÓN FLOTANTE (FAB) --- */}
       <button 
         onClick={() => navigate('/create')}
-        className="fixed bottom-24 right-4 h-14 w-14 bg-brand-600 text-gray-400 rounded-full shadow-xl shadow-brand-200 flex items-center justify-center hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all z-40"
+        className="fixed bottom-24 right-4 h-14 w-14 bg-brand-600 text-white rounded-full shadow-xl shadow-brand-200 flex items-center justify-center hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all z-40"
       >
         <Plus className="h-8 w-8" />
       </button>
 
       {/* --- BOTTOM NAVIGATION BAR (FIXED) --- */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe pt-2 px-6 flex justify-between items-center z-50 h-[70px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button className="flex flex-col items-center text-brand-600 w-16">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-around items-center z-50 h-[70px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        
+        <button className="flex flex-col items-center text-brand-600 w-14">
             <HomeIcon className="h-6 w-6 mb-1" />
             <span className="text-[10px] font-bold">Inicio</span>
         </button>
-        <button className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-16 group">
+
+        <button className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group">
             <Heart className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
-            <span className="text-[10px] font-medium">Favoritos</span>
+            <span className="text-[10px] font-medium">Favs</span>
         </button>
-        <button className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-16 group">
+
+        {/* --- BOTÓN PANEL (SOLO PARA ANFITRIONES) --- */}
+        {isHost && (
+            <button 
+                onClick={() => navigate('/host')}
+                className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group relative"
+            >
+                <div className="relative">
+                    <LayoutDashboard className="h-6 w-6 mb-1 group-active:scale-90 transition-transform text-brand-600" />
+                    <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                </div>
+                <span className="text-[10px] font-bold text-brand-700">Panel</span>
+            </button>
+        )}
+
+        <button className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group">
             <MessageSquare className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
             <span className="text-[10px] font-medium">Chat</span>
         </button>
-        {/* Botón Salir Restaurado */}
+        
+        <button 
+            onClick={() => navigate('/profile')}
+            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group"
+        >
+            <User className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
+            <span className="text-[10px] font-medium">Perfil</span>
+        </button>
+
         <button 
             onClick={handleLogout}
-            className="flex flex-col items-center text-gray-400 hover:text-red-500 transition-colors w-16 group"
+            className="flex flex-col items-center text-gray-400 hover:text-red-500 transition-colors w-14 group"
         >
             <LogOut className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
             <span className="text-[10px] font-medium">Salir</span>

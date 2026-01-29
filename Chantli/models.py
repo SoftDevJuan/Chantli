@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+
 # 1. Perfil extendido del usuario (Anfitriones/Huéspedes)
 class PerfilUsuario(models.Model):
     ROLES = (('anfitrion', 'Anfitrión'), ('huesped', 'Huésped'))
@@ -8,6 +9,7 @@ class PerfilUsuario(models.Model):
     rol = models.CharField(max_length=20, choices=ROLES, default='huesped')
     telefono = models.CharField(max_length=15, blank=True)
     biografia = models.TextField(blank=True, help_text="Descripción para generar confianza")
+    foto_perfil = models.ImageField(upload_to='perfiles/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.usuario.username} - {self.rol}"
@@ -29,14 +31,22 @@ class Propiedad(models.Model):
 
 # 3. Reserva (Transacción)
 class Reserva(models.Model):
-    ESTADOS = (('pendiente', 'Pendiente'), ('aceptada', 'Aceptada'), ('cancelada', 'Cancelada'))
-    propiedad = models.ForeignKey(Propiedad, on_delete=models.CASCADE, related_name='reservas')
-    huesped = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reservas')
-    fecha_inicio = models.DateField()
-    fecha_fin = models.DateField()
-    estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
-    total = models.DecimalField(max_digits=10, decimal_places=2)
+    ESTADOS = [
+        ('pendiente', 'Pendiente'),
+        ('aceptada', 'Aceptada'),
+        ('rechazada', 'Rechazada'),
+        ('cancelada', 'Cancelada'),
+    ]
 
+    propiedad = models.ForeignKey(Propiedad, on_delete=models.CASCADE)
+    huesped = models.ForeignKey(User, on_delete=models.CASCADE)
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField(null=True, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    # Campo Nuevo
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
+    
     def __str__(self):
         return f"Reserva de {self.huesped.username} en {self.propiedad.titulo}"
     
@@ -48,3 +58,21 @@ class FotoPropiedad(models.Model):
 
     def __str__(self):
         return f"Foto de {self.propiedad.titulo}"
+    
+
+class Notificacion(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notificaciones')
+    mensaje = models.CharField(max_length=255)
+    leida = models.BooleanField(default=False)
+    fecha = models.DateTimeField(auto_now_add=True)
+    # Opcional: para saber a qué reserva se refiere y redirigir
+    reserva_id = models.IntegerField(null=True, blank=True) 
+
+class Mensaje(models.Model):
+    remitente = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mensajes_enviados')
+    destinatario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mensajes_recibidos')
+    contenido = models.TextField()
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['fecha']

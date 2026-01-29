@@ -68,7 +68,7 @@ const Register = () => {
   };
 
   return (
-    <GoogleOAuthProvider clientId="AQUI_PEGA_TU_GOOGLE_CLIENT_ID">
+    <GoogleOAuthProvider clientId="485296325778-9i5j0efprjtgil4v66cr1p46rg18sjne.apps.googleusercontent.com">
         <div className="min-h-screen bg-brand-50 flex flex-col justify-center px-6 py-12 lg:px-8">
             
             <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-8">

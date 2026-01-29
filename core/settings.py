@@ -5,6 +5,8 @@ import environ
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MEDIA_URL = '/media/'
+
+# Ruta física donde se guardan en tu PC
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 env = environ.Env(

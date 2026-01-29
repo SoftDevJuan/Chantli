@@ -1,10 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import PropiedadViewSet, ReservaViewSet, CurrentUserView, RegistroView, GoogleLoginView
+from .views import *
 
 router = DefaultRouter()
 router.register(r'propiedades', PropiedadViewSet)
 router.register(r'reservas', ReservaViewSet)
+router.register(r'notificaciones', NotificacionViewSet, basename='notificacion')
+router.register(r'mensajes', MensajeViewSet, basename='mensaje')
 
 urlpatterns = [
     path('', include(router.urls)),
