@@ -1,0 +1,60 @@
+/* datepicker-custom.css */
+
+/* Hacemos que el contenedor del input ocupe todo el ancho */
+.react-datepicker-wrapper {
+    width: 100%;
+}
+
+/* Estilizamos el input del calendario para que parezca de Tailwind */
+.react-datepicker__input-container input {
+    width: 100%;
+    padding: 0.75rem 1rem; /* p-3 */
+    border-radius: 0.75rem; /* rounded-xl */
+    border: 1px solid #e5e7eb; /* border-gray-200 */
+    background-color: #f9fafb; /* bg-gray-50 */
+    font-size: 0.875rem; /* text-sm */
+    outline: none;
+    transition: all 0.2s;
+}
+
+/* Efecto focus */
+.react-datepicker__input-container input:focus {
+    border-color: #4F46E5; /* brand-600 */
+    box-shadow: 0 0 0 2px #c7d2fe; /* ring-brand-200 */
+}
+
+/* Días deshabilitados (Ocupados) */
+.react-datepicker__day--disabled {
+    color: #d1d5db !important; /* text-gray-300 */
+    background-color: #f3f4f6 !important; /* bg-gray-100 */
+    text-decoration: line-through;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Día seleccionado */
+.react-datepicker__day--selected, 
+.react-datepicker__day--keyboard-selected {
+    background-color: #4F46E5 !important; /* brand-600 */
+    color: white !important;
+    border-radius: 50%;
+}
+
+/* Día en el rango seleccionado */
+.react-datepicker__day--in-range {
+    background-color: #e0e7ff !important; /* brand-100 */
+    color: #4338ca !important; /* brand-700 */
+}
+
+/* Header del calendario */
+.react-datepicker__header {
+    background-color: white !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+}
+
+.react-datepicker {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+    font-family: inherit !important;
+}

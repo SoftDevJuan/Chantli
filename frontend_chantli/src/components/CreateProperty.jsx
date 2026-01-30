@@ -137,7 +137,7 @@ const CreateProperty = () => {
                   <button 
                     type="button"
                     onClick={() => removeFoto(index)}
-                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 hover:bg-red-500"
+                    className="absolute top-1 right-1 bg-black/50 text-gray-800 rounded-full p-0.5 hover:bg-red-500"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -189,7 +189,7 @@ const CreateProperty = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-brand-600 text-white font-bold rounded-xl shadow-lg hover:bg-brand-700 transition disabled:opacity-50"
+            className="w-full py-4 bg-brand-600 text-gray-800 font-bold rounded-xl shadow-lg hover:bg-brand-700 transition disabled:opacity-50"
           >
             {loading ? 'Subiendo fotos...' : 'Publicar Propiedad'}
           </button>

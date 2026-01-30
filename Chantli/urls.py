@@ -7,6 +7,8 @@ router.register(r'propiedades', PropiedadViewSet)
 router.register(r'reservas', ReservaViewSet)
 router.register(r'notificaciones', NotificacionViewSet, basename='notificacion')
 router.register(r'mensajes', MensajeViewSet, basename='mensaje')
+router.register(r'tarjetas', TarjetaViewSet, basename='tarjeta')
+router.register(r'pagos', PagoViewSet, basename='pago')
 
 urlpatterns = [
     path('', include(router.urls)),

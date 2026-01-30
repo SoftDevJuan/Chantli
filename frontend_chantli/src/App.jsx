@@ -8,6 +8,11 @@ import Profile from './components/Profile';
 import HostDashboard from './components/HostDashboard';
 import Notifications from './components/Notificactions';
 import Chat from './components/Chat';
+import Inbox from './components/Inbox';
+import PublicProfile from './components/PublicProfile';
+import Checkout from './components/Checkout';
+import AddCard from './components/AddCard';
+import Invoices from './components/Invoices';
 
 function App() {
   return (
@@ -22,6 +27,11 @@ function App() {
         <Route path="/host" element={<HostDashboard />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/chat/:userId" element={<Chat />} />
+        <Route path="/inbox" element={<Inbox />} />
+        <Route path="/public-profile/:userId" element={<PublicProfile />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/add-card" element={<AddCard />} />
+        <Route path="/invoices" element={<Invoices />} />
       </Routes>
     </BrowserRouter>
   );

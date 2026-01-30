@@ -128,7 +128,7 @@ const Register = () => {
 
                         {error && <div className="text-red-500 text-sm text-center">{error}</div>}
 
-                        <button type="submit" disabled={loading} className="w-full bg-brand-600 text-white font-bold py-3 rounded-xl hover:bg-brand-700 transition">
+                        <button type="submit" disabled={loading} className="w-full bg-brand-600 text-gray-800 font-bold py-3 rounded-xl hover:bg-brand-700 transition">
                             {loading ? 'Creando cuenta...' : 'Registrarse'}
                         </button>
                     </form>

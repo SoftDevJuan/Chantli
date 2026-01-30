@@ -8,13 +8,38 @@ class NotificacionSerializer(serializers.ModelSerializer):
         model = Notificacion
         fields = '__all__'
 
+class PagoSerializer(serializers.ModelSerializer):
+    propiedad_titulo = serializers.ReadOnlyField(source='reserva.propiedad.titulo')
+    propiedad_imagen = serializers.ReadOnlyField(source='reserva.propiedad.imagen.url')
+    fecha_formateada = serializers.DateTimeField(source='fecha_pago', format="%d/%m/%Y")
+    
+    # Campo calculado para enviar el nombre del cliente
+    nombre_cliente = serializers.ReadOnlyField(source='pagador.first_name')
+    apellido_cliente = serializers.ReadOnlyField(source='pagador.last_name')
+
+    class Meta:
+        model = Pago
+        fields = [
+            'id', 
+            'monto_renta', 
+            'monto_deposito',  # <--- AGREGADO
+            'total_pagado', 
+            'fecha_formateada', 
+            'pdf_factura', 
+            'propiedad_titulo',
+            'propiedad_imagen',
+            'nombre_cliente',
+            'apellido_cliente'
+        ]
+
 class MensajeSerializer(serializers.ModelSerializer):
-    # Para saber si el mensaje es "mio" o del "otro" en el frontend
     es_mio = serializers.SerializerMethodField()
 
     class Meta:
         model = Mensaje
         fields = ['id', 'remitente', 'destinatario', 'contenido', 'fecha', 'es_mio']
+        # AGREGAR ESTA LÍNEA:
+        read_only_fields = ['remitente', 'fecha', 'es_mio']
 
     def get_es_mio(self, obj):
         request = self.context.get('request')
@@ -31,6 +56,8 @@ class ReservaSerializer(serializers.ModelSerializer):
     huesped_apellido = serializers.ReadOnlyField(source='huesped.last_name')
     huesped_foto = serializers.ImageField(source='huesped.perfil.foto_perfil', read_only=True)
     huesped_id = serializers.ReadOnlyField(source='huesped.id')
+    propiedad_precio = serializers.ReadOnlyField(source='propiedad.precio')
+    propiedad_imagen = serializers.ImageField(source='propiedad.imagen', read_only=True)
 
     class Meta:
         model = Reserva
@@ -185,3 +212,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         print("Perfil guardado correctamente.")
 
         return instance
+    
+class TarjetaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tarjeta
+        fields = '__all__'  # Traer todos los campos (id, numero, saldo, etc.)
+        read_only_fields = ['usuario', 'saldo']

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Helvetica, sans-serif; color: #333; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .logo { font-size: 24px; font-weight: bold; color: #4F46E5; } /* Color Brand */
+        .info { margin-bottom: 20px; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .table th { background-color: #f2f2f2; }
+        .total { font-weight: bold; font-size: 18px; text-align: right; margin-top: 20px; }
+        .footer { margin-top: 50px; font-size: 12px; text-align: center; color: #777; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">CHANTLI</div>
+        <p>Comprobante de Pago</p>
+    </div>
+
+    <div class="info">
+        <p><strong>Folio:</strong> #{{ pago.id }}</p>
+        <p><strong>Fecha:</strong> {{ pago.fecha_pago|date:"d/m/Y H:i" }}</p>
+        <p><strong>Cliente:</strong> {{ pago.pagador.first_name }} {{ pago.pagador.last_name }}</p>
+        <p><strong>Propiedad:</strong> {{ pago.reserva.propiedad.titulo }}</p>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Concepto</th>
+                <th>Monto</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Renta Mensual</td>
+                <td>${{ pago.monto_renta }}</td>
+            </tr>
+            <tr>
+                <td>Depósito en Garantía</td>
+                <td>${{ pago.monto_deposito }}</td>
+            </tr>
+            <tr>
+                <td>IVA (16%)</td>
+                <td>${{ impuesto }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="total">
+        Total Pagado: ${{ pago.total_pagado }}
+    </div>
+
+    <div class="footer">
+        <p>Gracias por usar Chantli. Este documento es un comprobante digital.</p>
+        <p>Dudas: soporte@chantli.com</p>
+    </div>
+</body>
+</html>

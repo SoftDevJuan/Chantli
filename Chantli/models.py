@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
 
 
 # 1. Perfil extendido del usuario (Anfitriones/Huéspedes)
@@ -33,9 +34,11 @@ class Propiedad(models.Model):
 class Reserva(models.Model):
     ESTADOS = [
         ('pendiente', 'Pendiente'),
-        ('aceptada', 'Aceptada'),
+        ('esperando_pago', 'Aceptada - Esperando Pago'), # <--- NUEVO
+        ('pagada', 'Confirmada - Pagada'),               # <--- NUEVO
         ('rechazada', 'Rechazada'),
         ('cancelada', 'Cancelada'),
+        ('finalizada', 'Finalizada'), # Cuando termina la fecha
     ]
 
     propiedad = models.ForeignKey(Propiedad, on_delete=models.CASCADE)
@@ -44,12 +47,58 @@ class Reserva(models.Model):
     fecha_fin = models.DateField(null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     
+    
     # Campo Nuevo
     estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
     
     def __str__(self):
         return f"Reserva de {self.huesped.username} en {self.propiedad.titulo}"
     
+
+class Tarjeta(models.Model):
+    titular = models.CharField(max_length=100)
+    numero = models.CharField(max_length=16, unique=True) # Fake 16 digits
+    fecha_vencimiento = models.CharField(max_length=5) # MM/YY
+    cvv = models.CharField(max_length=3)
+    saldo = models.DecimalField(max_digits=10, decimal_places=2, default=50000.00) # Saldo inicial ficticio
+    usuario_dueño = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mis_tarjetas', null=True, blank=True)
+
+    def __str__(self):
+        return f"Tarjeta terminada en {self.numero[-4:]} - Saldo: ${self.saldo}"
+
+class Tarjeta(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tarjetas')
+    nombre_titular = models.CharField(max_length=100)
+    numero = models.CharField(max_length=16) # En producción esto se encripta
+    fecha_vencimiento = models.CharField(max_length=5) # MM/YY
+    cvv = models.CharField(max_length=4)
+    saldo = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    
+    # Campo para identificar si es la tarjeta predeterminada para cobros/pagos
+    es_principal = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.usuario.username} - **** {self.numero[-4:]} (${self.saldo})"
+
+# 2. ACTUALIZACIÓN DEL MODELO PAGO
+class Pago(models.Model):
+    reserva = models.OneToOneField('Reserva', on_delete=models.CASCADE, related_name='pago_info')
+    pagador = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pagos_realizados')
+    
+    # Desglose Exacto
+    monto_renta = models.DecimalField(max_digits=10, decimal_places=2) 
+    monto_deposito = models.DecimalField(max_digits=10, decimal_places=2)
+    comision_app = models.DecimalField(max_digits=10, decimal_places=2) # 5%
+    ganancia_anfitrion = models.DecimalField(max_digits=10, decimal_places=2) # 95%
+    
+    total_pagado = models.DecimalField(max_digits=10, decimal_places=2) # Renta + Depósito
+    
+    fecha_pago = models.DateTimeField(auto_now_add=True)
+    pdf_factura = models.FileField(upload_to='facturas/', null=True, blank=True)
+
+    def __str__(self):
+        return f"Pago #{self.id} - Total: ${self.total_pagado}"
+
 
 class FotoPropiedad(models.Model):
     propiedad = models.ForeignKey(Propiedad, related_name='album', on_delete=models.CASCADE)
@@ -73,6 +122,7 @@ class Mensaje(models.Model):
     destinatario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mensajes_recibidos')
     contenido = models.TextField()
     fecha = models.DateTimeField(auto_now_add=True)
+    leido = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['fecha']

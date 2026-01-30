@@ -175,7 +175,7 @@ const Profile = () => {
                     {/* Botón de cámara (Solo visible en edición) */}
                     {isEditing && (
                         <label className="absolute bottom-0 right-0 bg-brand-600 text-gray-400 p-2.5 rounded-full cursor-pointer shadow-md hover:bg-brand-700 transition-transform active:scale-90">
-                            <Camera className="h-5 w-5 text-white" />
+                            <Camera className="h-5 w-5 text-gray-800" />
                             <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} name="foto_perfil" />
                         </label>
                     )}

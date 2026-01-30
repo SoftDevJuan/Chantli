@@ -72,7 +72,7 @@ const Login = () => {
         {/* --- LOGO Y TÍTULO --- */}
         <div className="sm:mx-auto sm:w-full sm:max-w-sm text-center mb-10">
             <div className="mx-auto h-20 w-20 bg-brand-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 transition-transform hover:rotate-0">
-                <Home className="text-white h-10 w-10" />
+                <Home className="text-gray-800 h-10 w-10" />
             </div>
             <h2 className="mt-6 text-3xl font-extrabold text-brand-900 tracking-tight">
             Chantli
@@ -134,7 +134,7 @@ const Login = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-all active:scale-95 disabled:opacity-70"
+                        className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-gray-800 bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-all active:scale-95 disabled:opacity-70"
                     >
                         {loading ? 'Entrando...' : 'Iniciar Sesión'}
                     </button>

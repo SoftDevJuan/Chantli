@@ -7,6 +7,7 @@ const Home = () => {
   const [propiedades, setPropiedades] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   // Función para cerrar sesión
   const handleLogout = () => {
@@ -45,6 +46,11 @@ const Home = () => {
             }
         })
         .catch(err => console.error("Error al verificar rol:", err));
+
+        fetch('http://127.0.0.1:8000/api/mensajes/unread_count/', { headers })
+            .then(r => r.json())
+            .then(data => setUnreadMessages(data.count))
+            .catch(console.error);
     }
 
   }, [navigate]);
@@ -108,7 +114,7 @@ const Home = () => {
       <div className="bg-white/80 backdrop-blur-sm sticky top-[105px] z-20 border-b border-gray-100">
           <div className="max-w-7xl mx-auto flex overflow-x-auto gap-3 px-4 py-3 scrollbar-hide">
             {['Todos', 'Económicos', 'Cerca de CUCEI', 'Amueblados', 'Solo Mujeres', 'Pet Friendly'].map((filtro, i) => (
-                <button key={i} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm ${i === 0 ? 'bg-brand-600 text-white shadow-brand-200' : 'bg-white text-gray-600 border border-gray-200 hover:border-brand-300 hover:text-brand-600'}`}>
+                <button key={i} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm ${i === 0 ? 'bg-brand-600 text-gray-800 shadow-brand-200' : 'bg-white text-gray-600 border border-gray-200 hover:border-brand-300 hover:text-brand-600'}`}>
                     {filtro}
                 </button>
             ))}
@@ -177,7 +183,7 @@ const Home = () => {
                                 </div>
                                 <button 
                                     onClick={() => navigate(`/propiedad/${prop.id}`)}
-                                    className="bg-brand-50 text-brand-700 hover:bg-brand-600 hover:text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors"
+                                    className="bg-brand-50 text-brand-700 hover:bg-brand-600 hover:text-gray-800 text-xs font-bold px-4 py-2 rounded-lg transition-colors"
                                 >
                                     Ver Detalles
                                 </button>
@@ -192,7 +198,7 @@ const Home = () => {
       {/* --- BOTÓN FLOTANTE (FAB) --- */}
       <button 
         onClick={() => navigate('/create')}
-        className="fixed bottom-24 right-4 h-14 w-14 bg-brand-600 text-white rounded-full shadow-xl shadow-brand-200 flex items-center justify-center hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all z-40"
+        className="fixed bottom-24 right-4 h-14 w-14 bg-brand-600 text-gray-800 rounded-full shadow-xl shadow-brand-200 flex items-center justify-center hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all z-40"
       >
         <Plus className="h-8 w-8" />
       </button>
@@ -224,8 +230,21 @@ const Home = () => {
             </button>
         )}
 
-        <button className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group">
-            <MessageSquare className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
+        <button 
+            onClick={() => navigate('/inbox')}
+            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group relative"
+        >
+            <div className="relative">
+                <MessageSquare className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
+                
+                {/* --- AQUÍ ESTÁ EL PUNTITO ROJO --- */}
+                {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white"></span>
+                    </span>
+                )}
+            </div>
             <span className="text-[10px] font-medium">Chat</span>
         </button>
         
