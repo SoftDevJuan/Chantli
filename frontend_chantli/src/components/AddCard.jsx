@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CreditCard, ArrowLeft, Save } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const AddCard = () => {
   const navigate = useNavigate();
   const location = useLocation(); // Para saber desde dónde venimos (ej. desde el Checkout)
@@ -14,7 +16,7 @@ const AddCard = () => {
   });
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({ ...formData, [e.target.name]: e.target.value })
   };
 
   const handleSubmit = async (e) => {
@@ -22,9 +24,9 @@ const AddCard = () => {
     const token = localStorage.getItem('chantli_token');
 
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/tarjetas/', {
+        const res = await fetch(`${API_URL}/api/tarjetas/`, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Authorization': `Token ${token}`,
                 'Content-Type': 'application/json' 
             },

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, UploadCloud, MapPin, DollarSign, Type, X } from 'lucide-react';
-
+const API_URL = import.meta.env.VITE_API_URL;
 const CreateProperty = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -77,7 +77,7 @@ const CreateProperty = () => {
     });
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/propiedades/', {
+      const response = await fetch(`${API_URL}/api/propiedades/`, {
         method: 'POST',
         headers: { 'Authorization': `Token ${token}` },
         body: dataToSend

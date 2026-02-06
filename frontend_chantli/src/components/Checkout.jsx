@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CreditCard, Lock, ChevronDown, Plus, ShieldCheck, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Checkout = () => {
   const { state } = useLocation(); 
   const navigate = useNavigate();
@@ -29,11 +31,11 @@ const Checkout = () => {
     const initData = async () => {
         try {
             // 1. Cargar Tarjetas
-            const reqTarjetas = fetch('http://127.0.0.1:8000/api/tarjetas/', { headers });
+            const reqTarjetas = fetch(`${API_URL}/api/tarjetas/`, { headers });
             
             // 2. Verificar estado REAL de la reserva (por si el usuario recarga la página)
             // Asumimos que tienes un endpoint para ver el detalle de la reserva
-            const reqReserva = fetch(`http://127.0.0.1:8000/api/reservas/${state.reservaId}/`, { headers });
+            const reqReserva = fetch(`${API_URL}/api/reservas/${state.reservaId}/`, { headers });
 
             const [resTarjetas, resReserva] = await Promise.all([reqTarjetas, reqReserva]);
             
@@ -68,7 +70,7 @@ const Checkout = () => {
     try {
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        const res = await fetch('http://127.0.0.1:8000/api/pagos/procesar/', {
+        const res = await fetch(`${API_URL}/api/pagos/procesar/`, {
             method: 'POST',
             headers: { 
                 'Authorization': `Token ${token}`, 

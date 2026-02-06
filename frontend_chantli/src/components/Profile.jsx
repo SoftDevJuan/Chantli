@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, User, Mail, Phone, FileText, Save, X, Edit2 } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Profile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ const Profile = () => {
     const token = localStorage.getItem('chantli_token');
     if (!token) { navigate('/'); return; }
 
-    fetch('http://127.0.0.1:8000/api/me/', {
+    fetch(`${API_URL}/api/me/`, {
         headers: { 'Authorization': `Token ${token}` }
     })
     .then(res => res.json())
@@ -91,7 +93,7 @@ const Profile = () => {
     }
 
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/me/', {
+        const res = await fetch(`${API_URL}/api/me/`, {
             method: 'PATCH',
             headers: { 
                 'Authorization': `Token ${token}`

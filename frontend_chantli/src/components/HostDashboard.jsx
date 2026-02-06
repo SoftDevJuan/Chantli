@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Home, Edit, Trash2, MessageCircle, User, BarChart, TrendingUp, Star, Wallet, Plus, CreditCard } from 'lucide-react';
 
+
+const API_URL = import.meta.env.VITE_API_URL;
+
 const HostDashboard = () => {
   const navigate = useNavigate();
   // Estado para controlar las pestañas: 'propiedades', 'reservas', 'estadisticas', 'billetera'
@@ -30,17 +33,17 @@ const HostDashboard = () => {
 
     try {
         // 1. Cargar Mis Propiedades
-        const resProp = await fetch('http://127.0.0.1:8000/api/propiedades/mis_propiedades/', { headers });
+        const resProp = await fetch(`${API_URL}/api/propiedades/mis_propiedades/`, { headers });
         const dataProp = await resProp.json();
         setMisPropiedades(dataProp);
 
         // 2. Cargar Solicitudes Recibidas
-        const resRes = await fetch('http://127.0.0.1:8000/api/reservas/solicitudes_recibidas/', { headers });
+        const resRes = await fetch(`${API_URL}/api/reservas/solicitudes_recibidas/`, { headers });
         const dataRes = await resRes.json();
         setSolicitudes(dataRes);
 
         // 3. Cargar Mis Tarjetas
-        const resCards = await fetch('http://127.0.0.1:8000/api/tarjetas/', { headers });
+        const resCards = await fetch(`${API_URL}/api/tarjetas/`, { headers });
         const dataCards = await resCards.json();
         setMisTarjetas(dataCards);
         
@@ -59,7 +62,7 @@ const HostDashboard = () => {
   const handleResponder = async (id, estado) => {
     const token = localStorage.getItem('chantli_token');
     try {
-        const res = await fetch(`http://127.0.0.1:8000/api/reservas/${id}/responder/`, {
+        const res = await fetch(`${API_URL}/api/reservas/${id}/responder/`, {
             method: 'PATCH',
             headers: { 
                 'Authorization': `Token ${token}`,

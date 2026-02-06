@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MessageSquare, User } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
+
 const Inbox = () => {
   const navigate = useNavigate();
   const [chats, setChats] = useState([]);
@@ -11,7 +14,7 @@ const Inbox = () => {
     const token = localStorage.getItem('chantli_token');
     if (!token) { navigate('/'); return; }
 
-    fetch('http://127.0.0.1:8000/api/mensajes/inbox/', {
+    fetch(`${API_URL}/api/mensajes/inbox/`, {
         headers: { 'Authorization': `Token ${token}` }
     })
     .then(r => r.json())

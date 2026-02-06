@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, ShieldCheck } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const PublicProfile = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -11,7 +13,7 @@ const PublicProfile = () => {
     // Reutilizamos el endpoint user_info que hicimos para el chat
     // O idealmente crear uno /api/users/<id>/public_profile/ con bio y stats
     const token = localStorage.getItem('chantli_token');
-    fetch(`http://127.0.0.1:8000/api/mensajes/user_info/${userId}/`, {
+    fetch(`${API_URL}/api/mensajes/user_info/${userId}/`, {
         headers: { 'Authorization': `Token ${token}` }
     })
     .then(r => r.json())

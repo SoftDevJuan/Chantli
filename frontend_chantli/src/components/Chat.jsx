@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Send, ArrowLeft } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Chat = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ const Chat = () => {
 
   // --- 1. Cargar Info del Otro Usuario ---
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/api/mensajes/user_info/${userId}/`, {
+    fetch(`${API_URL}/api/mensajes/user_info/${userId}/`, {
         headers: { 'Authorization': `Token ${token}` }
     })
     .then(r => r.json())
@@ -29,7 +31,7 @@ const Chat = () => {
 
   // --- 2. Cargar Mensajes ---
   const cargarMensajes = () => {
-    fetch(`http://127.0.0.1:8000/api/mensajes/conversacion/${userId}/`, {
+    fetch(`${API_URL}/api/mensajes/conversacion/${userId}/`, {
         headers: { 'Authorization': `Token ${token}` }
     })
     .then(r => r.json())
@@ -58,7 +60,7 @@ const Chat = () => {
     if (!nuevoMensaje.trim()) return;
 
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/mensajes/', {
+        const res = await fetch(`${url_general}/api/mensajes/`, {
             method: 'POST',
             headers: { 
                 'Authorization': `Token ${token}`,

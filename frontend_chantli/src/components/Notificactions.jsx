@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, CheckCircle, Info } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Notifications = () => {
   const [notificaciones, setNotificaciones] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null); // Para saber quién soy
@@ -12,12 +14,12 @@ const Notifications = () => {
     const headers = { 'Authorization': `Token ${token}` };
 
     // 1. Cargar Notificaciones
-    fetch('http://127.0.0.1:8000/api/notificaciones/', { headers })
+    fetch(`${API_URL}/api/notificaciones/`, { headers })
       .then(r => r.json())
       .then(setNotificaciones);
 
     // 2. Saber quién soy (para decidir si soy Huésped o Anfitrión en el click)
-    fetch('http://127.0.0.1:8000/api/me/', { headers })
+    fetch(`${API_URL}/api/me/`, { headers })
       .then(r => r.json())
       .then(data => setCurrentUserId(data.id));
 
@@ -30,7 +32,7 @@ const Notifications = () => {
     setNotificaciones(prev => prev.map(n => n.id === noti.id ? { ...n, leida: true } : n));
     
     // B. Marcar como leída en Backend (sin esperar respuesta para ser rápido)
-    fetch(`http://127.0.0.1:8000/api/notificaciones/${noti.id}/marcar_leida/`, {
+    fetch(`${API_URL}/api/notificaciones/${noti.id}/marcar_leida/`, {
         method: 'PATCH',
         headers: { 'Authorization': `Token ${token}` }
     });
@@ -39,7 +41,7 @@ const Notifications = () => {
     if (noti.reserva_id) {
         try {
             // Consultamos la reserva para ver su estado actual
-            const res = await fetch(`http://127.0.0.1:8000/api/reservas/${noti.reserva_id}/`, {
+            const res = await fetch(`${API_URL}/api/reservas/${noti.reserva_id}/`, {
                 headers: { 'Authorization': `Token ${token}` }
             });
             const reserva = await res.json();

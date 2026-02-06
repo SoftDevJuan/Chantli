@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, Lock, Home, Briefcase } from 'lucide-react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Register = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -21,7 +23,7 @@ const Register = () => {
     setError('');
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/registro/', {
+      const response = await fetch(`${API_URL}/api/registro/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -47,7 +49,7 @@ const Register = () => {
   // --- REGISTRO CON GOOGLE ---
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/google-login/', {
+        const res = await fetch(`${API_URL}/api/google-login/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

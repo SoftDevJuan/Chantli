@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Lock, Home } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL;
 // 1. Importar librería de Google
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
@@ -18,7 +20,7 @@ const Login = () => {
     setError('');
     
     try {
-      const response = await fetch('http://127.0.0.1:8000/api-token-auth/', {
+      const response = await fetch(`${API_URL}/api-token-auth/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -42,7 +44,7 @@ const Login = () => {
   const handleGoogleLogin = async (credentialResponse) => {
     try {
         // Usamos el mismo endpoint que en el registro
-        const res = await fetch('http://127.0.0.1:8000/api/google-login/', {
+        const res = await fetch(`${API_URL}/api/google-login/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

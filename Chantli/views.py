@@ -411,7 +411,7 @@ class PagoViewSet(viewsets.ModelViewSet):  # <--- CAMBIO IMPORTANTE: ModelViewSe
                 return Response({'error': 'El Administrador no tiene una cuenta configurada para recibir pagos.'}, status=500)
 
             # B) Buscar la cuenta del ANFITRION (Dueño de la casa)
-            host_user = reserva.propiedad.propietario
+            host_user = reserva.propiedad.anfitrion
             host_card = Tarjeta.objects.filter(usuario=host_user).first()
             if not host_card:
                 return Response({'error': f'El anfitrión {host_user.first_name} no ha registrado una cuenta para recibir su dinero.'}, status=400)

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Search, Home as HomeIcon, Heart, MessageSquare, LogOut, Filter, Plus, User, LayoutDashboard, Bell } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Home = () => {
   const [isHost, setIsHost] = useState(false);
   const [propiedades, setPropiedades] = useState([]);
@@ -24,7 +26,7 @@ const Home = () => {
     const headers = token ? { 'Authorization': `Token ${token}` } : {};
 
     // 1. Cargar Propiedades
-    fetch('http://127.0.0.1:8000/api/propiedades/', { headers })
+    fetch(`${API_URL}/api/propiedades/`, { headers })
       .then(res => res.json())
       .then(data => {
           setPropiedades(data);
@@ -37,7 +39,7 @@ const Home = () => {
 
     // 2. Cargar Usuario para verificar si es ANFITRIÓN
     if (token) {
-        fetch('http://127.0.0.1:8000/api/me/', { headers })
+        fetch(`${API_URL}/api/me/`, { headers })
         .then(res => res.json())
         .then(userData => {
             // Verificamos el rol (puede venir directo o dentro de perfil)
@@ -47,7 +49,7 @@ const Home = () => {
         })
         .catch(err => console.error("Error al verificar rol:", err));
 
-        fetch('http://127.0.0.1:8000/api/mensajes/unread_count/', { headers })
+        fetch(`${API_URL}/api/mensajes/unread_count/`, { headers })
             .then(r => r.json())
             .then(data => setUnreadMessages(data.count))
             .catch(console.error);

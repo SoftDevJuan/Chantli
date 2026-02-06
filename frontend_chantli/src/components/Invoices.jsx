@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Download, Calendar, CheckCircle, Eye, X } from 'lucide-react';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const Invoices = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const Invoices = () => {
   useEffect(() => {
     const token = localStorage.getItem('chantli_token');
     
-    fetch('http://127.0.0.1:8000/api/pagos/', {
+    fetch(`${API_URL}/api/pagos/`, {
         headers: { 'Authorization': `Token ${token}` }
     })
     .then(r => r.json())
@@ -38,7 +39,7 @@ const Invoices = () => {
   const getPdfUrl = (url) => {
       if (!url) return '#';
       if (url.startsWith('http')) return url; // Si ya trae http, la dejamos igual
-      return `http://127.0.0.1:8000${url}`;  // Si no, le ponemos el servidor
+      return `${API_URL}${url}`;  // Si no, le ponemos el servidor
   };
 
   return (

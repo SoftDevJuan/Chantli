@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 // --- IMPORTACIONES CALENDARIO ---
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -42,15 +44,15 @@ const PropertyDetail = () => {
     const headers = token ? { 'Authorization': `Token ${token}` } : {};
 
     // 1. Cargar Propiedad
-    const fetchPropiedad = fetch(`http://127.0.0.1:8000/api/propiedades/${id}/`, { headers }).then(r => r.json());
+    const fetchPropiedad = fetch(`${API_URL}/api/propiedades/${id}/`, { headers }).then(r => r.json());
     
     // 2. Cargar Usuario
     const fetchUser = token 
-        ? fetch(`http://127.0.0.1:8000/api/me/`, { headers }).then(r => r.json())
+        ? fetch(`${API_URL}/api/me/`, { headers }).then(r => r.json())
         : Promise.resolve(null);
 
     // 3. Cargar Fechas Ocupadas
-    const fetchFechas = fetch(`http://127.0.0.1:8000/api/propiedades/${id}/fechas_ocupadas/`, { headers })
+    const fetchFechas = fetch(`${API_URL}/api/propiedades/${id}/fechas_ocupadas/`, { headers })
         .then(r => r.ok ? r.json() : [])
         .catch(() => []);
 
@@ -120,7 +122,7 @@ const PropertyDetail = () => {
     const format = (date) => date.toISOString().split('T')[0];
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/api/reservas/', {
+        const response = await fetch(`${API_URL}/api/reservas/`, {
             method: 'POST',
             headers: {
                 'Authorization': `Token ${token}`,
