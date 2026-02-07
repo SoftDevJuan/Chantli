@@ -60,7 +60,7 @@ const Chat = () => {
     if (!nuevoMensaje.trim()) return;
 
     try {
-        const res = await fetch(`${url_general}/api/mensajes/`, {
+        const res = await fetch(`${API_URL}/api/mensajes/`, {
             method: 'POST',
             headers: { 
                 'Authorization': `Token ${token}`,
