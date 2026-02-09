@@ -147,3 +147,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'juan.gonzalez@ccljalisco.gob.mx' 
 EMAIL_HOST_PASSWORD = 'eywkssqkqxbrklev' # No es tu pass normal, es una App Password
+
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024 
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024

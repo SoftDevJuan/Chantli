@@ -74,6 +74,7 @@ class PropiedadSerializer(serializers.ModelSerializer):
     anfitrion = serializers.ReadOnlyField(source='anfitrion.username')
     # Esto trae las fotos extra anidadas
     album = FotoPropiedadSerializer(many=True, read_only=True) 
+    anfitrion_id = serializers.ReadOnlyField(source='anfitrion.id')
 
     class Meta:
         model = Propiedad
@@ -82,29 +83,38 @@ class PropiedadSerializer(serializers.ModelSerializer):
             'anfitrion': {'read_only': True}
         }
 
+class PerfilUsuarioSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='usuario.username', read_only=True)
+    email = serializers.EmailField(source='usuario.email', read_only=True)
+    
+    # Opcional: Para mostrar la URL completa de las imágenes si hace falta
+    foto_perfil = serializers.ImageField(required=False)
+
+    class Meta:
+        model = PerfilUsuario
+        fields = '__all__'
+        # Protegemos estos campos para que nadie se "autoverifique" enviando True en el JSON
+        read_only_fields = ['es_anfitrion_verificado', 'es_huesped_verificado', 'requiere_deposito_garantia', 'rol']
+
 class UserSerializer(serializers.ModelSerializer):
-    # Campos del Perfil (Lectura)
+    # Campos individuales (los que ya tenías)
     rol = serializers.ReadOnlyField(source='perfil.rol')
     foto_perfil = serializers.ImageField(source='perfil.foto_perfil', read_only=True)
-    
-    # --- ESTO ES LO QUE FALTABA ---
     telefono = serializers.ReadOnlyField(source='perfil.telefono')
     biografia = serializers.ReadOnlyField(source='perfil.biografia')
+
+    # --- AGREGAR ESTO ---
+    # Esto envía el objeto perfil completo anidado, incluyendo 'es_anfitrion_verificado'
+    perfil = PerfilUsuarioSerializer(read_only=True) 
 
     class Meta:
         model = User
         fields = [
-            'id', 
-            'username', 
-            'email', 
-            'rol', 
-            'foto_perfil',
-            # Agregar campos del modelo User
-            'first_name', 
-            'last_name',
-            # Agregar campos del Perfil
-            'telefono',
-            'biografia'
+            'id', 'username', 'email', 
+            'first_name', 'last_name',
+            'rol', 'foto_perfil', 'telefono', 'biografia',
+            'is_superuser', 'is_staff',
+            'perfil', # <--- NO OLVIDES AGREGARLO AQUI
         ]
 
 class RegistroSerializer(serializers.ModelSerializer):
@@ -218,3 +228,23 @@ class TarjetaSerializer(serializers.ModelSerializer):
         model = Tarjeta
         fields = '__all__'  # Traer todos los campos (id, numero, saldo, etc.)
         read_only_fields = ['usuario', 'saldo']
+
+
+class ResenaSerializer(serializers.ModelSerializer):
+    autor_nombre = serializers.ReadOnlyField(source='autor.first_name')
+    autor_foto = serializers.ImageField(source='autor.perfil.foto_perfil', read_only=True)
+
+    class Meta:
+        model = Resena
+        fields = '__all__'
+        read_only_fields = ['autor', 'fecha']
+
+class ResenaUsuarioSerializer(serializers.ModelSerializer):
+    autor_nombre = serializers.ReadOnlyField(source='autor.first_name')
+    autor_foto = serializers.ImageField(source='autor.perfil.foto_perfil', read_only=True)
+
+    class Meta:
+        model = ResenaUsuario
+        fields = '__all__'
+        # --- AGREGA ESTA LÍNEA ---
+        read_only_fields = ['autor', 'fecha']

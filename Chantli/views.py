@@ -3,6 +3,11 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser
+
+# Asegúrate de importar tus modelos y el serializer
+from .models import Pago, Reserva, Tarjeta
+from .serializers import PagoSerializer
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from .models import *
@@ -14,6 +19,9 @@ from django.db import transaction
 from decimal import Decimal
 import datetime
 import io
+from django.db.models import Sum, Count, Avg
+from django.db.models.functions import TruncMonth
+from django.utils import timezone
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from django.core.files.base import ContentFile
@@ -30,22 +38,46 @@ class ReservaViewSet(viewsets.ModelViewSet):
     queryset = Reserva.objects.all()
     serializer_class = ReservaSerializer
 
+
 class PropiedadViewSet(viewsets.ModelViewSet):
     queryset = Propiedad.objects.all()
     serializer_class = PropiedadSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    # --- 1. NUEVO MÉTODO: EL FILTRO DE SEGURIDAD ---
+    # Este método se ejecuta ANTES de guardar nada.
+    def create(self, request, *args, **kwargs):
+        try:
+            # Buscamos el perfil del usuario (PerfilUsuario)
+            perfil = request.user.perfil 
+            
+            # Verificamos si el admin ya le dio el visto bueno
+            if not perfil.es_anfitrion_verificado:
+                return Response(
+                    {"error": "No puedes publicar propiedades hasta que verifiquemos tu identidad. Ve a tu perfil y sube tus documentos."}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        except Exception as e:
+            # Si el usuario no tiene perfil o pasa algo raro
+            return Response({"error": "Error al verificar tu perfil."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Si pasa la validación, dejamos que Django siga normal.
+        # Esto llamará internamente a tu 'perform_create' de abajo.
+        return super().create(request, *args, **kwargs)
+
+    # --- 2. TU MÉTODO EXISTENTE (Se queda igual) ---
     def perform_create(self, serializer):
-        # 1. Guardamos la propiedad principal (con su título, precio, y foto de portada si la hay)
+        # 1. Guardamos la propiedad principal
         propiedad = serializer.save(anfitrion=self.request.user)
 
-        # 2. Buscamos si vienen fotos extra en la petición
-        # 'fotos_extra' será la clave que usaremos en el Frontend
+        # 2. Buscamos si vienen fotos extra
         imagenes_extra = self.request.FILES.getlist('fotos_extra')
 
-        # 3. Creamos un objeto FotoPropiedad por cada imagen recibida
+        # 3. Creamos un objeto FotoPropiedad por cada imagen
         for imagen in imagenes_extra:
             FotoPropiedad.objects.create(propiedad=propiedad, imagen=imagen)
+
+    # --- RESTO DE TUS ACCIONES (Se quedan igual) ---
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def mis_propiedades(self, request):
@@ -56,7 +88,6 @@ class PropiedadViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def fechas_ocupadas(self, request, pk=None):
         propiedad = self.get_object()
-        # Buscamos reservas futuras que estén aceptadas o pagadas
         ocupaciones = Reserva.objects.filter(
             propiedad=propiedad,
             estado__in=['aceptada', 'pagada'],
@@ -70,6 +101,53 @@ class PropiedadViewSet(viewsets.ModelViewSet):
                 'fin': o.fecha_fin
             })
         return Response(data)
+
+    @action(detail=False, methods=['get'])
+    def resumen_anfitrion(self, request):
+        usuario = request.user
+        
+        # 1. Obtener mis propiedades
+        mis_propiedades = Propiedad.objects.filter(anfitrion=usuario)
+        total_propiedades = mis_propiedades.count()
+
+        # 2. Calcular Ganancias Totales (Sumando Saldo de Tarjetas)
+        mis_tarjetas = Tarjeta.objects.filter(usuario=usuario)
+        total_en_billetera = mis_tarjetas.aggregate(total=Sum('saldo'))['total'] or 0
+
+        # 3. Calcular Ocupación Mensual
+        hace_6_meses = timezone.now() - datetime.timedelta(days=180)
+        
+        reservas_por_mes = Reserva.objects.filter(
+            propiedad__in=mis_propiedades,
+            estado='pagada',
+            fecha_inicio__gte=hace_6_meses
+        ).annotate(mes=TruncMonth('fecha_inicio')).values('mes').annotate(total=Count('id')).order_by('mes')
+
+        grafica_mensual = []
+        for r in reservas_por_mes:
+            nombre_mes = r['mes'].strftime('%B') 
+            porcentaje = (r['total'] / total_propiedades) * 100 if total_propiedades > 0 else 0
+            grafica_mensual.append({
+                'mes': nombre_mes,
+                'cantidad': r['total'],
+                'porcentaje': min(porcentaje, 100)
+            })
+
+        # 4. Promedio de Calificaciones (Fijo en 5.0 por ahora)
+        calificacion_promedio = 5.0
+
+        # 5. Conteo histórico
+        reservas_historicas = Reserva.objects.filter(
+            propiedad__in=mis_propiedades, 
+            estado='pagada'
+        ).count()
+
+        return Response({
+            'ganancias_totales': total_en_billetera,
+            'reservas_pagadas': reservas_historicas,
+            'calificacion_promedio': calificacion_promedio,
+            'grafica_mensual': grafica_mensual
+        })
     
 
 # --- VISTA DE NOTIFICACIONES ---
@@ -318,20 +396,7 @@ class GoogleLoginView(APIView):
         except ValueError:
             return Response({'error': 'Token de Google inválido'}, status=status.HTTP_400_BAD_REQUEST)
         
-from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from decimal import Decimal
-import io
-from django.template.loader import render_to_string
-from django.core.mail import EmailMessage
-from django.core.files.base import ContentFile
-from xhtml2pdf import pisa
-from django.conf import settings
 
-# Asegúrate de importar tus modelos y el serializer
-from .models import Pago, Reserva, Tarjeta
-from .serializers import PagoSerializer
 
 class PagoViewSet(viewsets.ModelViewSet):  # <--- CAMBIO IMPORTANTE: ModelViewSet
     serializer_class = PagoSerializer
@@ -519,3 +584,113 @@ class TarjetaViewSet(viewsets.ModelViewSet):
     # Al crear, asignar automáticamente el usuario y saldo en 0
     def perform_create(self, serializer):
         serializer.save(usuario=self.request.user, saldo=0.00)
+
+
+class PerfilUsuarioViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PerfilUsuarioSerializer
+    queryset = PerfilUsuario.objects.all()
+
+    def get_object(self):
+        # Esta lógica es vital para evitar errores de "Perfil no existe"
+        obj, created = PerfilUsuario.objects.get_or_create(usuario=self.request.user)
+        return obj
+
+    # Acción para subir documentos sensibles (INE, Constancias)
+    @action(detail=False, methods=['patch'], parser_classes=[MultiPartParser, FormParser])
+    def subir_documentos(self, request):
+        perfil = self.get_object()
+        serializer = self.get_serializer(perfil, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            # Lógica extra (quitar depósito si sube constancia)
+            if perfil.constancia_estudios_trabajo:
+                perfil.requiere_deposito_garantia = False
+                perfil.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    def admin_pendientes(self, request):
+        # Buscamos perfiles que tengan al menos una identificación subida
+        # y que falte alguna verificación (anfitrión o huésped)
+        perfiles = PerfilUsuario.objects.filter(
+            Q(identificacion_frente__isnull=False) | Q(constancia_estudios_trabajo__isnull=False)
+        ).order_by('-id') # Los más recientes primero
+        
+        serializer = self.get_serializer(perfiles, many=True)
+        return Response(serializer.data)
+
+    # 2. Acción para APROBAR o RECHAZAR (Toggle)
+    @action(detail=True, methods=['patch'], permission_classes=[IsAdminUser])
+    def admin_verificar(self, request, pk=None):
+        # Nota: Aquí pk es el ID del PERFIL, no del usuario
+        try:
+            perfil = PerfilUsuario.objects.get(pk=pk)
+        except PerfilUsuario.DoesNotExist:
+            return Response({"error": "Perfil no encontrado"}, status=404)
+
+        # Recibimos qué queremos verificar: 'anfitrion' o 'huesped'
+        tipo = request.data.get('tipo') # 'anfitrion' | 'huesped'
+        valor = request.data.get('valor') # true | false
+
+        if tipo == 'anfitrion':
+            perfil.es_anfitrion_verificado = valor
+        elif tipo == 'huesped':
+            perfil.es_huesped_verificado = valor
+            # Si verificamos al huésped, quitamos el depósito obligatorio
+            if valor: perfil.requiere_deposito_garantia = False
+        
+        perfil.save()
+        return Response({"status": "Actualizado", "anfitrion": perfil.es_anfitrion_verificado, "huesped": perfil.es_huesped_verificado})
+    
+
+class ResenaViewSet(viewsets.ModelViewSet):
+    queryset = Resena.objects.all()
+    serializer_class = ResenaSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        # VALIDACIÓN: ¿El usuario realmente rentó aquí?
+        usuario = self.request.user
+        propiedad_id = self.request.data.get('propiedad')
+        
+        tiene_reserva = Reserva.objects.filter(
+            huesped=usuario, 
+            propiedad_id=propiedad_id,
+            estado__in=['pagada', 'finalizada'] # Solo si ya pagó
+        ).exists()
+
+        if not tiene_reserva:
+            raise serializers.ValidationError("Solo puedes opinar si has reservado este lugar.")
+            
+        serializer.save(autor=usuario)
+
+
+class ResenaUsuarioViewSet(viewsets.ModelViewSet):
+    queryset = ResenaUsuario.objects.all()
+    serializer_class = ResenaUsuarioSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(autor=self.request.user)
+        
+    # Endpoint para obtener reseñas de un usuario específico
+    @action(detail=False, methods=['get'])
+    def usuario(self, request):
+        user_id = request.query_params.get('id')
+        resenas = self.queryset.filter(destinatario_id=user_id).order_by('-fecha')
+        serializer = self.get_serializer(resenas, many=True)
+        return Response(serializer.data)
+
+# Endpoint público para obtener datos básicos de CUALQUIER usuario
+from rest_framework.views import APIView
+class PublicUserProfileView(APIView):
+    def get(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+            # Reutilizamos el UserSerializer que ya tienes (asegúrate que incluya perfil)
+            serializer = UserSerializer(user) 
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response(status=404)

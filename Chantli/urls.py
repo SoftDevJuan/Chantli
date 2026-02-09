@@ -9,10 +9,14 @@ router.register(r'notificaciones', NotificacionViewSet, basename='notificacion')
 router.register(r'mensajes', MensajeViewSet, basename='mensaje')
 router.register(r'tarjetas', TarjetaViewSet, basename='tarjeta')
 router.register(r'pagos', PagoViewSet, basename='pago')
+router.register(r'perfil', PerfilUsuarioViewSet, basename='perfil')
+router.register(r'resenas-usuario', ResenaUsuarioViewSet)
+router.register(r'resenas', ResenaViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
     path('me/', CurrentUserView.as_view(), name='current-user'),
     path('registro/', RegistroView.as_view(), name='registro'),
     path('google-login/', GoogleLoginView.as_view(), name='google-login'),
+    path('public-profile/<int:pk>/', PublicUserProfileView.as_view()),
 ]

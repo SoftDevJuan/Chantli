@@ -1,10 +1,13 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
-# 1. Perfil extendido del usuario (Anfitriones/Huéspedes)
+
 class PerfilUsuario(models.Model):
+    # --- TUS CAMPOS ORIGINALES ---
     ROLES = (('anfitrion', 'Anfitrión'), ('huesped', 'Huésped'))
     usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     rol = models.CharField(max_length=20, choices=ROLES, default='huesped')
@@ -12,8 +15,45 @@ class PerfilUsuario(models.Model):
     biografia = models.TextField(blank=True, help_text="Descripción para generar confianza")
     foto_perfil = models.ImageField(upload_to='perfiles/', null=True, blank=True)
 
+    # --- NUEVOS CAMPOS DE VERIFICACIÓN (FUSIÓN) ---
+    direccion = models.TextField(blank=True, help_text="Dirección completa con CP")
+    
+    # Documentación General
+    identificacion_frente = models.ImageField(upload_to='documentos/ids/', null=True, blank=True)
+    identificacion_reverso = models.ImageField(upload_to='documentos/ids/', null=True, blank=True)
+    curp = models.CharField(max_length=18, blank=True) 
+
+    # Datos Fiscales y Anfitrión (Solo si el rol es anfitrion, pero se deja opcional)
+    rfc = models.CharField(max_length=13, blank=True)
+    constancia_fiscal = models.FileField(upload_to='documentos/fiscal/', null=True, blank=True)
+    comprobante_domicilio_propiedad = models.FileField(upload_to='documentos/propiedad/', null=True, blank=True)
+    
+    # Estados de Verificación (El Admin controla esto)
+    es_anfitrion_verificado = models.BooleanField(default=False) 
+    
+    # Datos Huésped
+    referencia_nombre = models.CharField(max_length=100, blank=True)
+    referencia_telefono = models.CharField(max_length=15, blank=True)
+    constancia_estudios_trabajo = models.FileField(upload_to='documentos/huesped/', null=True, blank=True)
+    
+    # Flags de control
+    requiere_deposito_garantia = models.BooleanField(default=True) 
+    es_huesped_verificado = models.BooleanField(default=False)
+
+    # Legal
+    acepto_terminos_y_reglamento = models.BooleanField(default=False)
+    fecha_aceptacion = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return f"{self.usuario.username} - {self.rol}"
+
+
+# Señal para crear el perfil automáticamente
+@receiver(post_save, sender=User)
+def crear_perfil_usuario(sender, instance, created, **kwargs):
+    if created:
+        PerfilUsuario.objects.create(usuario=instance)
+
 
 # 2. Propiedad (El cuarto)
 class Propiedad(models.Model):
@@ -26,6 +66,7 @@ class Propiedad(models.Model):
     imagen = models.ImageField(upload_to='propiedades/', null=True, blank=True)
     disponible = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    amenidades = models.TextField(blank=True, help_text="Lista de amenidades en formato JSON o texto")
 
     def __str__(self):
         return f"{self.titulo} (${self.precio})"
@@ -54,6 +95,26 @@ class Reserva(models.Model):
     def __str__(self):
         return f"Reserva de {self.huesped.username} en {self.propiedad.titulo}"
     
+class Resena(models.Model):
+    propiedad = models.ForeignKey(Propiedad, related_name='resenas', on_delete=models.CASCADE)
+    autor = models.ForeignKey(User, on_delete=models.CASCADE)
+    calificacion = models.IntegerField(default=5) # 1 a 5
+    comentario = models.TextField()
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.autor.username} - {self.propiedad.titulo}"
+    
+class ResenaUsuario(models.Model):
+    autor = models.ForeignKey(User, related_name='resenas_escritas', on_delete=models.CASCADE)
+    destinatario = models.ForeignKey(User, related_name='resenas_recibidas', on_delete=models.CASCADE)
+    calificacion = models.IntegerField(default=5)
+    comentario = models.TextField()
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"De {self.autor.username} para {self.destinatario.username}"
+
 
 class Tarjeta(models.Model):
     titular = models.CharField(max_length=100)
