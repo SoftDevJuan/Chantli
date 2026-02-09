@@ -238,6 +238,7 @@ class ResenaSerializer(serializers.ModelSerializer):
         model = Resena
         fields = '__all__'
         read_only_fields = ['autor', 'fecha']
+        
 
 class ResenaUsuarioSerializer(serializers.ModelSerializer):
     autor_nombre = serializers.ReadOnlyField(source='autor.first_name')
