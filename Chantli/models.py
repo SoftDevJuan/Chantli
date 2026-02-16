@@ -67,6 +67,8 @@ class Propiedad(models.Model):
     disponible = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     amenidades = models.TextField(blank=True, help_text="Lista de amenidades en formato JSON o texto")
+    latitud = models.FloatField(null=True, blank=True)
+    longitud = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.titulo} (${self.precio})"

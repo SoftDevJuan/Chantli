@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, filters
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.views import APIView
@@ -29,10 +29,6 @@ from xhtml2pdf import pisa
 from django.conf import settings
 
 
-class PropiedadViewSet(viewsets.ModelViewSet):
-    queryset = Propiedad.objects.all()
-    serializer_class = PropiedadSerializer
-    # Aquí luego agregaremos permisos (IsAuthenticated, etc.)
 
 class ReservaViewSet(viewsets.ModelViewSet):
     queryset = Reserva.objects.all()
@@ -43,6 +39,14 @@ class PropiedadViewSet(viewsets.ModelViewSet):
     queryset = Propiedad.objects.all()
     serializer_class = PropiedadSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    
+    # Campos donde buscará cuando uses ?search=texto
+    search_fields = ['titulo', 'descripcion', 'direccion', 'amenidades']
+    
+    # Campos por los que se puede ordenar cuando uses ?ordering=precio
+    ordering_fields = ['precio', 'fecha_publicacion']
 
     # --- 1. NUEVO MÉTODO: EL FILTRO DE SEGURIDAD ---
     # Este método se ejecuta ANTES de guardar nada.
@@ -646,9 +650,24 @@ class PerfilUsuarioViewSet(viewsets.ModelViewSet):
     
 
 class ResenaViewSet(viewsets.ModelViewSet):
-    queryset = Resena.objects.all()
+    
     serializer_class = ResenaSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        # 1. Empezamos con todas las reseñas
+        queryset = Resena.objects.all()
+        
+        # 2. Buscamos si en la URL viene el parámetro 'propiedad'
+        # (Ejemplo: /api/resenas/?propiedad=5)
+        propiedad_id = self.request.query_params.get('propiedad')
+        
+        # 3. Si existe, filtramos
+        if propiedad_id:
+            queryset = queryset.filter(propiedad_id=propiedad_id)
+            
+        # 4. Ordenamos por las más recientes primero
+        return queryset.order_by('-fecha')
 
     def perform_create(self, serializer):
         # VALIDACIÓN: ¿El usuario realmente rentó aquí?

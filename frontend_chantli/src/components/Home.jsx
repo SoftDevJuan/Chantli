@@ -18,6 +18,10 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
+  // --- ESTADOS DE BÚSQUEDA ---
+  const [searchText, setSearchText] = useState('');
+  const [activeFilter, setActiveFilter] = useState('Todos');
+
   // Función para cerrar sesión
   const handleLogout = () => {
     if (window.confirm("¿Seguro que quieres salir?")) {
@@ -26,67 +30,107 @@ const Home = () => {
     }
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem('chantli_token');
-    const headers = token ? { 'Authorization': `Token ${token}` } : {};
+  // --- FUNCIÓN PRINCIPAL DE CARGA (Con Filtros) ---
+  const fetchProperties = (queryParams = '') => {
+      setLoading(true);
+      const token = localStorage.getItem('chantli_token');
+      const headers = token ? { 'Authorization': `Token ${token}` } : {};
 
-    // 1. Cargar Propiedades (CORREGIDO)
-    setLoading(true);
-    fetch(`${API_URL}/api/propiedades/`, { headers })
-      .then(res => {
-          if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
-          return res.json();
-      })
-      .then(data => {
-          console.log("📦 Propiedades recibidas:", data); // <--- MIRA ESTO EN CONSOLA
-          
-          // Lógica robusta: Si es array úsalo, si es objeto paginado usa .results, si no, array vacío
-          let lista = [];
-          if (Array.isArray(data)) {
-              lista = data;
-          } else if (data && data.results && Array.isArray(data.results)) {
-              lista = data.results; // Caso con paginación de Django
-          }
-          
-          setPropiedades(lista);
-          setLoading(false);
-      })
-      .catch(err => {
-          console.error("❌ Error cargando propiedades:", err);
-          setPropiedades([]); // Evita que se quede undefined
-          setLoading(false);
-      });
-
-    // 2. Cargar Usuario y verificar Roles
-    if (token) {
-        fetch(`${API_URL}/api/me/`, { headers })
+      fetch(`${API_URL}/api/propiedades/${queryParams}`, { headers })
         .then(res => {
-            if (res.ok) return res.json();
-            throw new Error("Error cargando perfil");
+            if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
+            return res.json();
         })
+        .then(data => {
+            let lista = [];
+            if (Array.isArray(data)) {
+                lista = data;
+            } else if (data && data.results && Array.isArray(data.results)) {
+                lista = data.results; 
+            }
+            setPropiedades(lista);
+            setLoading(false);
+        })
+        .catch(err => {
+            console.error("❌ Error cargando propiedades:", err);
+            setPropiedades([]);
+            setLoading(false);
+        });
+  };
+
+  // Carga inicial
+  useEffect(() => {
+    fetchProperties(); // Carga todo al inicio
+
+    // Cargar Usuario y verificar Roles
+    const token = localStorage.getItem('chantli_token');
+    if (token) {
+        const headers = { 'Authorization': `Token ${token}` };
+        fetch(`${API_URL}/api/me/`, { headers })
+        .then(res => res.ok ? res.json() : null)
         .then(userData => {
-            // A) Lógica ANFITRIÓN
-            const rol = userData.rol || userData.perfil?.rol;
-            if (rol === 'anfitrion') setIsHost(true);
-
-            // B) Lógica ADMIN
-            if (userData.is_staff || userData.is_superuser) setIsAdmin(true);
+            if (userData) {
+                const rol = userData.rol || userData.perfil?.rol;
+                if (rol === 'anfitrion') setIsHost(true);
+                if (userData.is_staff || userData.is_superuser) setIsAdmin(true);
+            }
         })
-        .catch(err => console.error("Error rol:", err));
+        .catch(console.error);
 
-        // Cargar mensajes no leídos
         fetch(`${API_URL}/api/mensajes/unread_count/`, { headers })
             .then(r => r.ok ? r.json() : { count: 0 })
             .then(data => setUnreadMessages(data.count))
             .catch(console.error);
     } else {
-        // Si no hay token, loading false en props ya se hizo arriba, 
-        // pero aseguramos roles en false
         setIsHost(false);
         setIsAdmin(false);
     }
-
   }, [navigate]);
+
+  // --- MANEJADORES DE BÚSQUEDA ---
+
+  // 1. Ejecutar búsqueda manual (Input)
+  const handleSearch = () => {
+      setActiveFilter('Custom'); // Desactivar chips visualmente
+      fetchProperties(`?search=${searchText}`);
+  };
+
+  const handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+          handleSearch();
+      }
+  };
+
+  // 2. Ejecutar filtros rápidos (Botones)
+  const applyQuickFilter = (filtro) => {
+      setActiveFilter(filtro);
+      setSearchText(''); // Limpiar barra de búsqueda al usar chip
+
+      switch (filtro) {
+          case 'Todos':
+              fetchProperties();
+              break;
+          case 'Económicos':
+              // Ordenar por precio ascendente
+              fetchProperties('?ordering=precio'); 
+              break;
+          case 'Cerca de CUCEI':
+              // Buscar coincidencias de texto
+              fetchProperties('?search=CUCEI');
+              break;
+          case 'Amueblados':
+              fetchProperties('?search=Amueblado');
+              break;
+          case 'Solo Mujeres':
+              fetchProperties('?search=Mujeres');
+              break;
+          case 'Pet Friendly':
+              fetchProperties('?search=Mascotas'); // O 'Pet Friendly' según cómo lo guardes
+              break;
+          default:
+              fetchProperties();
+      }
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen pb-28 font-sans select-none">
@@ -96,16 +140,14 @@ const Home = () => {
         <div className="max-w-7xl mx-auto">
             
             <div className="flex justify-between items-center mb-3">
-                {/* --- IZQUIERDA: Ubicación --- */}
-                <div className="flex items-center text-brand-900 bg-brand-50 px-3 py-1 rounded-full">
+                {/* Ubicación */}
+                <div className="flex items-center text-brand-900 bg-brand-50 px-3 py-1 rounded-full cursor-pointer hover:bg-brand-100 transition">
                     <MapPin className="h-4 w-4 mr-1 text-brand-600" />
                     <span className="font-bold text-xs sm:text-sm">Guadalajara, ZMG</span>
                 </div>
 
-                {/* --- DERECHA: Botones --- */}
+                {/* Botones Derecha */}
                 <div className="flex items-center gap-3">
-                    
-                    {/* BOTÓN ADMIN */}
                     {isAdmin && (
                         <button 
                             onClick={() => navigate('/admin-panel')}
@@ -116,7 +158,6 @@ const Home = () => {
                         </button>
                     )}
 
-                    {/* Notificaciones */}
                     <button 
                         onClick={() => navigate('/notifications')}
                         className="p-2 bg-white rounded-full border border-gray-100 shadow-sm relative active:scale-95 transition-transform hover:bg-gray-50"
@@ -125,7 +166,6 @@ const Home = () => {
                         <span className="absolute top-1 right-2 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
                     </button>
 
-                    {/* Avatar */}
                     <div 
                         onClick={() => navigate('/profile')} 
                         className="h-9 w-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border border-brand-200 cursor-pointer hover:bg-brand-200 transition"
@@ -135,46 +175,62 @@ const Home = () => {
                 </div>
             </div>
             
-            {/* Barra de Búsqueda */}
+            {/* --- BARRA DE BÚSQUEDA ACTIVA --- */}
             <div className="relative group">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 group-focus-within:text-brand-500" />
                 <input 
                     type="text" 
-                    placeholder="¿Cerca de qué universidad buscas?" 
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Busca por zona, escuela o amenidad..." 
                     className="w-full bg-gray-100 rounded-xl py-2 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all shadow-sm"
                 />
-                <button className="absolute right-2 top-1.5 p-1 bg-white rounded-lg border shadow-sm active:bg-gray-50 hover:text-brand-600">
+                <button 
+                    onClick={handleSearch}
+                    className="absolute right-2 top-1.5 p-1 bg-white rounded-lg border shadow-sm active:bg-gray-50 hover:text-brand-600"
+                >
                     <Filter className="h-4 w-4 text-gray-600" />
                 </button>
             </div>
         </div>
       </div>
 
-      {/* --- FILTROS RÁPIDOS --- */}
+      {/* --- FILTROS RÁPIDOS ACTIVOS --- */}
       <div className="bg-white/80 backdrop-blur-sm sticky top-[105px] z-20 border-b border-gray-100">
           <div className="max-w-7xl mx-auto flex overflow-x-auto gap-3 px-4 py-3 scrollbar-hide">
             {['Todos', 'Económicos', 'Cerca de CUCEI', 'Amueblados', 'Solo Mujeres', 'Pet Friendly'].map((filtro, i) => (
-                <button key={i} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm ${i === 0 ? 'bg-brand-600 text-gray-800 shadow-brand-200' : 'bg-white text-gray-600 border border-gray-200 hover:border-brand-300 hover:text-brand-600'}`}>
+                <button 
+                    key={i} 
+                    onClick={() => applyQuickFilter(filtro)}
+                    className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm 
+                    ${activeFilter === filtro 
+                        ? 'bg-brand-600 text-gray-900 shadow-brand-200 ring-2 ring-brand-300' 
+                        : 'bg-white text-gray-600 border border-gray-200 hover:border-brand-300 hover:text-brand-600'}`}
+                >
                     {filtro}
                 </button>
             ))}
           </div>
       </div>
 
-      {/* --- LISTA DE PROPIEDADES (GRID) --- */}
+      {/* --- LISTA DE PROPIEDADES --- */}
       <div className="max-w-7xl mx-auto px-4 mt-6">
-        <h3 className="font-bold text-lg text-gray-800 mb-4 ml-1">Explorar alojamientos</h3>
+        <h3 className="font-bold text-lg text-gray-800 mb-4 ml-1">
+            {activeFilter === 'Todos' ? 'Explorar alojamientos' : `Resultados para: "${activeFilter === 'Custom' ? searchText : activeFilter}"`}
+        </h3>
         
         {loading ? (
              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                  <Loader2 className="h-10 w-10 animate-spin text-brand-600 mb-4" />
-                 <p className="text-sm">Cargando espacios...</p>
+                 <p className="text-sm">Buscando espacios ideales...</p>
              </div>
         ) : propiedades.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
-                <p className="text-gray-500 mb-2">No se encontraron propiedades.</p>
-                <button onClick={() => window.location.reload()} className="text-brand-600 font-bold text-sm underline">
-                    Recargar página
+                <p className="text-gray-500 mb-2 font-medium">No encontramos coincidencias.</p>
+                <p className="text-xs text-gray-400 mb-4">Intenta con otros términos o limpia los filtros.</p>
+                <button onClick={() => applyQuickFilter('Todos')} className="bg-brand-50 text-brand-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-brand-100 transition">
+                    Ver todo
                 </button>
             </div>
         ) : (
@@ -222,7 +278,7 @@ const Home = () => {
                             
                             <div className="mt-auto flex items-center justify-between border-t border-gray-50 pt-3">
                                 <div>
-                                    <span className="text-xl font-extrabold text-brand-600">${parseFloat(prop.precio).toLocaleString()}</span>
+                                    <span className="text-xl font-extrabold text-brand-950">${parseFloat(prop.precio).toLocaleString()}</span>
                                     <span className="text-gray-400 text-xs font-medium ml-1">/mes</span>
                                 </div>
                                 <button className="bg-brand-50 text-brand-700 hover:bg-brand-600 hover:text-gray-800 text-xs font-bold px-4 py-2 rounded-lg transition-colors">
@@ -247,7 +303,7 @@ const Home = () => {
       {/* --- NAVBAR INFERIOR --- */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-around items-center z-50 h-[70px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         
-        <button className="flex flex-col items-center text-brand-600 w-14">
+        <button className="flex flex-col items-center text-brand-900 w-14">
             <HomeIcon className="h-6 w-6 mb-1" />
             <span className="text-[10px] font-bold">Inicio</span>
         </button>
@@ -263,10 +319,10 @@ const Home = () => {
                 className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group relative"
             >
                 <div className="relative">
-                    <LayoutDashboard className="h-6 w-6 mb-1 group-active:scale-90 transition-transform text-brand-600" />
+                    <LayoutDashboard className="h-6 w-6 mb-1 group-active:scale-90 transition-transform text-brand-900" />
                     <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
                 </div>
-                <span className="text-[10px] font-bold text-brand-700">Panel</span>
+                <span className="text-[10px] font-bold text-brand-900">Panel</span>
             </button>
         )}
 
@@ -296,7 +352,7 @@ const Home = () => {
 
         <button 
             onClick={handleLogout}
-            className="flex flex-col items-center text-gray-400 hover:text-red-500 transition-colors w-14 group"
+            className="flex flex-col items-center text-gray-900 hover:text-red-500 transition-colors w-14 group"
         >
             <LogOut className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
             <span className="text-[10px] font-medium">Salir</span>

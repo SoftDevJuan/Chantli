@@ -2,11 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, User, Send, ChevronRight } from 'lucide-react';
 
+// --- IMPORTACIONES MAPA GOOGLE ---
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+
 // --- IMPORTACIONES CALENDARIO ---
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY; // Tu API Key del .env
 
 const PropertyDetail = () => {
   const { id } = useParams();
@@ -27,7 +31,6 @@ const PropertyDetail = () => {
   // Estados del Calendario
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  
   const [bookingLoading, setBookingLoading] = useState(false);
 
   // Estados para Nueva Reseña
@@ -38,6 +41,12 @@ const PropertyDetail = () => {
   // Cálculo Financiero
   const [calculo, setCalculo] = useState({
       dias: 0, renta: 0, iva: 0, deposito: 0, total: 0, error: ''
+  });
+
+  // --- HOOK DE GOOGLE MAPS ---
+  const { isLoaded } = useJsApiLoader({
+      id: 'google-map-script',
+      googleMapsApiKey: GOOGLE_API_KEY
   });
 
   useEffect(() => {
@@ -109,6 +118,7 @@ const PropertyDetail = () => {
   }, [startDate, endDate, propiedad]);
 
   const handleReserva = async (e) => {
+    // ... (Tu lógica de reserva existente) ...
     e.preventDefault();
     if (calculo.error || calculo.total === 0) return;
     setBookingLoading(true);
@@ -142,6 +152,7 @@ const PropertyDetail = () => {
   };
 
   const handleSubmitResena = async (e) => {
+      // ... (Tu lógica de reseña existente) ...
       e.preventDefault();
       setReviewLoading(true);
       const token = localStorage.getItem('chantli_token');
@@ -185,8 +196,13 @@ const PropertyDetail = () => {
         ? (resenas.reduce((acc, curr) => acc + curr.calificacion, 0) / resenas.length).toFixed(1) 
         : "Nuevo";
 
+  // --- LÓGICA DE COORDENADAS ---
+  const hasCoordinates = propiedad.latitud && propiedad.longitud;
+  const mapCenter = hasCoordinates ? { lat: parseFloat(propiedad.latitud), lng: parseFloat(propiedad.longitud) } : null;
+
   return (
     <div className="min-h-screen bg-white pb-28">
+      {/* Estilos para DatePicker */}
       <style>{`
         .react-datepicker-wrapper { width: 100%; }
         .react-datepicker__input-container input { width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; background-color: #f9fafb; outline: none; }
@@ -238,20 +254,17 @@ const PropertyDetail = () => {
 
         <hr className="border-gray-100 my-6" />
 
-        {/* --- ANFITRIÓN (CLICKABLE) --- */}
+        {/* --- ANFITRIÓN --- */}
         <div className="flex items-center justify-between mb-6">
             <div 
-                // USAMOS anfitrion_id QUE ACABAMOS DE AGREGAR AL BACKEND
                 onClick={() => navigate(`/public-profile/${propiedad.anfitrion_id}`)}
                 className="flex items-center cursor-pointer hover:bg-gray-50 p-2 -ml-2 rounded-xl transition-colors group"
             >
                 <div className="h-12 w-12 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-lg mr-4 border-2 border-white shadow-sm group-hover:shadow-md transition-all">
-                    {/* Usamos la inicial del nombre */}
                     {propiedad.anfitrion_nombre ? propiedad.anfitrion_nombre.charAt(0).toUpperCase() : 'A'} 
                 </div>
                 <div>
                     <p className="font-bold text-gray-900 group-hover:text-brand-600 transition-colors flex items-center gap-1">
-                        {/* Mostramos el nombre */}
                         Anfitrión: {propiedad.anfitrion_nombre || "Usuario"} 
                         <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </p>
@@ -259,7 +272,6 @@ const PropertyDetail = () => {
                 </div>
             </div>
             
-            {/* Botón de Chat (Evitamos que se mande mensaje a sí mismo) */}
             {currentUser && currentUser.id !== propiedad.anfitrion_id && (
                 <button 
                     onClick={() => navigate(`/chat/${propiedad.anfitrion_id}`)}
@@ -288,17 +300,52 @@ const PropertyDetail = () => {
             </div>
         </div>
 
-        {/* Mapa */}
+        {/* --- MAPA DE UBICACIÓN --- */}
         <div className="mb-10">
             <h3 className="font-bold text-lg mb-3 text-gray-900">Ubicación</h3>
-            <div className="h-48 bg-gray-200 rounded-xl overflow-hidden relative shadow-sm border border-gray-100">
-                <iframe width="100%" height="100%" frameBorder="0" scrolling="no" src="https://maps.google.com/maps?q=Guadalajara&t=&z=13&ie=UTF8&iwloc=&output=embed" className="w-full h-full"></iframe>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2">
-                        <div className="h-2 w-2 bg-brand-600 rounded-full animate-pulse"></div>
-                        <span className="text-[10px] font-bold text-gray-700">Zona aproximada</span>
+            <div className="h-64 bg-gray-200 rounded-xl overflow-hidden relative shadow-sm border border-gray-100">
+                
+                {/* LÓGICA DE MAPA INTERACTIVO */}
+                {isLoaded && hasCoordinates ? (
+                    <GoogleMap
+                        mapContainerStyle={{ width: '100%', height: '100%' }}
+                        center={mapCenter}
+                        zoom={15}
+                        options={{ 
+                            disableDefaultUI: true,
+                            zoomControl: true,
+                            streetViewControl: false,
+                            mapTypeControl: false,
+                            
+                            // --- AGREGA ESTA LÍNEA ---
+                            mapId: "DEMO_MAP_ID" 
+                            // "DEMO_MAP_ID" es un ID gratuito de Google para pruebas. 
+                            // Hace que el mapa cargue vectores (más fluido) en lugar de imágenes (cuadritos).
+                            // -------------------------
+                        }}
+                    >
+                        <Marker position={mapCenter} />
+                    </GoogleMap>
+                ) : (
+                    // FALLBACK: Si no hay coordenadas o no cargó, mostramos iframe genérico buscando por dirección
+                    <iframe 
+                        width="100%" 
+                        height="100%" 
+                        frameBorder="0" 
+                        scrolling="no" 
+                        src={`https://maps.google.com/maps?q=${encodeURIComponent(propiedad.direccion || "Guadalajara")}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                        className="w-full h-full" 
+                    ></iframe>
+                )}
+
+                {!hasCoordinates && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2">
+                            <div className="h-2 w-2 bg-brand-600 rounded-full animate-pulse"></div>
+                            <span className="text-[10px] font-bold text-gray-700">Ubicación aproximada (Dirección)</span>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
 
@@ -337,7 +384,7 @@ const PropertyDetail = () => {
                 </div>
             )}
 
-            {/* LISTA */}
+            {/* LISTA DE RESEÑAS */}
             <div className="space-y-4">
                 {resenas.length === 0 ? (
                     <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
@@ -386,7 +433,7 @@ const PropertyDetail = () => {
                 <span className="text-[10px] text-green-600 font-bold">Disponible ahora</span>
             </div>
             
-            {currentUser && currentUser.id === propiedad.anfitrion ? ( // CORREGIDO: ID vs ID
+            {currentUser && currentUser.id === propiedad.anfitrion_id ? ( 
                 <button className="bg-gray-900 text-white font-bold py-3 px-8 rounded-xl opacity-50 cursor-not-allowed">Es tu propiedad</button>
             ) : (
                 <button onClick={() => setIsModalOpen(true)} className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-brand-200 transition-all active:scale-95">

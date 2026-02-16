@@ -12,7 +12,7 @@ export default {
           50: '#eef2ff',  // Fondo muy claro (casi blanco)
           100: '#e0e7ff', // Fondo claro
           200: '#c7d2fe', // Bordes suaves / Fondos secundarios
-          300: '#a5b4fc', // Bordes activos
+          300: '#ccd2ef', // Bordes activos
           400: '#818cf8', // Iconos inactivos / Texto secundario
           500: '#6366f1', // Color principal suave
           600: '#dcdbf3', // COLOR PRINCIPAL (Botones, Links, Iconos activos)
