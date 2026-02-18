@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import environ 
+from django.core.wsgi import get_wsgi_application
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MEDIA_URL = '/media/'
@@ -154,3 +155,9 @@ EMAIL_HOST_PASSWORD = 'eywkssqkqxbrklev' # No es tu pass normal, es una App Pass
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+
+application = get_wsgi_application()
+
+app = application
