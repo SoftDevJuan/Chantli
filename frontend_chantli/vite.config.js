@@ -41,5 +41,14 @@ export default defineConfig({
   ],
   server: {
     host: true
-  }
+  },
+  workbox: {
+        // Evita que el Service Worker secuestre estas rutas de Django
+        navigateFallbackDenylist: [
+          /^\/admin/, 
+          /^\/api/, 
+          /^\/media/,
+          /^\/static/
+        ]
+      }
 })

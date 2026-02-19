@@ -4,3 +4,5 @@
 env/
 /media
 media/
+/migrations
+migrations/
