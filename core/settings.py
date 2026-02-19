@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import environ 
+from django.core.wsgi import get_wsgi_application
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MEDIA_URL = '/media/'
@@ -53,6 +54,7 @@ REST_FRAMEWORK = {
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -138,6 +140,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # settings.py
@@ -152,4 +156,8 @@ EMAIL_HOST_PASSWORD = 'eywkssqkqxbrklev' # No es tu pass normal, es una App Pass
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
-CSRF_TRUSTED_ORIGINS = ['https://backend-xyz.ngrok-free.app']
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+
+application = get_wsgi_application()
+
+app = application
