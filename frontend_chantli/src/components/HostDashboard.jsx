@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Home, Edit, Trash2, MessageCircle, User, BarChart, TrendingUp, Star, Wallet, Plus, CreditCard, Loader2 } from 'lucide-react';
 
-const API_URL = 'http://127.0.0.1:8000'; 
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 const HostDashboard = () => {
   const navigate = useNavigate();
