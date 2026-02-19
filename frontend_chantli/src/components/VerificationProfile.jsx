@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Upload, ShieldCheck, FileText, AlertTriangle, CheckCircle, User, Briefcase, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const VerificationProfile = () => {
   const navigate = useNavigate();
   const [perfil, setPerfil] = useState(null);
@@ -28,7 +30,7 @@ const VerificationProfile = () => {
   const cargarPerfil = async () => {
     const token = localStorage.getItem('chantli_token');
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/perfil/subir_documentos/', {
+        const res = await fetch(`${API_URL}/api/perfil/subir_documentos/`, {
             headers: { 'Authorization': `Token ${token}` }
         });
         const data = await res.json();
@@ -82,7 +84,7 @@ const VerificationProfile = () => {
       });
 
       try {
-          const res = await fetch('http://127.0.0.1:8000/api/perfil/subir_documentos/', {
+          const res = await fetch(`${API_URL}/api/perfil/subir_documentos/`, {
               method: 'PATCH',
               headers: { 'Authorization': `Token ${token}` }, // NO poner Content-Type con FormData
               body: data
