@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, User, Send, ChevronRight } from 'lucide-react';
+import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, Send, ChevronRight, Home } from 'lucide-react';
 
 // --- IMPORTACIONES MAPA GOOGLE ---
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
@@ -10,7 +10,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY; // Tu API Key del .env
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 const PropertyDetail = () => {
   const { id } = useParams();
@@ -21,9 +21,11 @@ const PropertyDetail = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [resenas, setResenas] = useState([]); 
   const [loading, setLoading] = useState(true);
-  
-  // Array de fechas ocupadas
   const [diasBloqueados, setDiasBloqueados] = useState([]);
+
+  // Estados de Favoritos
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
 
   // Estados de UI
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,11 +73,16 @@ const PropertyDetail = () => {
         ? fetch(`${API_URL}/api/reservas/?huesped_actual=true&propiedad=${id}`, { headers }).then(r => r.json())
         : Promise.resolve([]);
 
-    Promise.all([fetchPropiedad, fetchUser, fetchFechas, fetchReviews, checkHistory])
-      .then(([propData, userData, fechasData, reviewsData, historyData]) => {
+    const checkFavorite = token 
+        ? fetch(`${API_URL}/api/favoritos/check/?propiedad=${id}`, { headers }).then(r => r.ok ? r.json() : { is_favorite: false }).catch(() => ({ is_favorite: false })) 
+        : Promise.resolve({ is_favorite: false });
+
+    Promise.all([fetchPropiedad, fetchUser, fetchFechas, fetchReviews, checkHistory, checkFavorite])
+      .then(([propData, userData, fechasData, reviewsData, historyData, favData]) => {
           setPropiedad(propData);
           setCurrentUser(userData);
           setResenas(reviewsData);
+          setIsFavorite(favData.is_favorite);
           
           if (userData && Array.isArray(historyData)) {
              const hasPaid = historyData.some(r => r.estado === 'pagada' || r.estado === 'finalizada');
@@ -117,8 +124,40 @@ const PropertyDetail = () => {
     setCalculo({ dias, renta: rentaCalculada, iva: impuesto, deposito, total: totalFinal, error: '' });
   }, [startDate, endDate, propiedad]);
 
+  const handleToggleFavorite = async () => {
+      if (!currentUser) {
+          alert("Debes iniciar sesión para guardar favoritos.");
+          return;
+      }
+      if (favLoading) return;
+      
+      setFavLoading(true);
+      setIsFavorite(!isFavorite); // Optimistic update
+
+      const token = localStorage.getItem('chantli_token');
+      try {
+          const res = await fetch(`${API_URL}/api/favoritos/toggle/`, {
+              method: 'POST',
+              headers: { 
+                  'Authorization': `Token ${token}`, 
+                  'Content-Type': 'application/json' 
+              },
+              body: JSON.stringify({ propiedad_id: propiedad.id })
+          });
+
+          if (!res.ok) {
+              setIsFavorite(isFavorite); // Revertir si hay error
+              alert("Error al actualizar favoritos.");
+          }
+      } catch (error) {
+          setIsFavorite(isFavorite);
+          console.error(error);
+      } finally {
+          setFavLoading(false);
+      }
+  };
+
   const handleReserva = async (e) => {
-    // ... (Tu lógica de reserva existente) ...
     e.preventDefault();
     if (calculo.error || calculo.total === 0) return;
     setBookingLoading(true);
@@ -152,7 +191,6 @@ const PropertyDetail = () => {
   };
 
   const handleSubmitResena = async (e) => {
-      // ... (Tu lógica de reseña existente) ...
       e.preventDefault();
       setReviewLoading(true);
       const token = localStorage.getItem('chantli_token');
@@ -196,13 +234,11 @@ const PropertyDetail = () => {
         ? (resenas.reduce((acc, curr) => acc + curr.calificacion, 0) / resenas.length).toFixed(1) 
         : "Nuevo";
 
-  // --- LÓGICA DE COORDENADAS ---
   const hasCoordinates = propiedad.latitud && propiedad.longitud;
   const mapCenter = hasCoordinates ? { lat: parseFloat(propiedad.latitud), lng: parseFloat(propiedad.longitud) } : null;
 
   return (
     <div className="min-h-screen bg-white pb-28">
-      {/* Estilos para DatePicker */}
       <style>{`
         .react-datepicker-wrapper { width: 100%; }
         .react-datepicker__input-container input { width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; background-color: #f9fafb; outline: none; }
@@ -220,9 +256,24 @@ const PropertyDetail = () => {
         <button onClick={() => navigate(-1)} className="bg-white/90 p-2 rounded-full shadow-md backdrop-blur-md pointer-events-auto hover:bg-white transition">
             <ArrowLeft className="h-6 w-6 text-gray-800" />
         </button>
+         
         <div className="flex gap-3 pointer-events-auto">
-            <button className="bg-white/90 p-2 rounded-full shadow-md backdrop-blur-md hover:text-red-500 transition"><Heart className="h-6 w-6" /></button>
-            <button className="bg-white/90 p-2 rounded-full shadow-md backdrop-blur-md"><Share2 className="h-6 w-6" /></button>
+            <button 
+                onClick={() => navigate('/home')} 
+                className="bg-white/90 p-2 rounded-full shadow-md backdrop-blur-md hover:bg-white transition"
+            >
+                <Home className="h-6 w-6 text-gray-800" />
+            </button>
+            <button 
+                onClick={handleToggleFavorite}
+                disabled={favLoading}
+                className="bg-white/90 p-2 rounded-full shadow-md backdrop-blur-md hover:scale-105 transition-transform disabled:opacity-70"
+            >
+                <Heart className={`h-6 w-6 transition-colors duration-300 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-800'}`} />
+            </button>
+            <button className="bg-white/90 p-2 rounded-full shadow-md backdrop-blur-md hover:bg-white transition">
+                <Share2 className="h-6 w-6 text-gray-800" />
+            </button>
         </div>
       </div>
 
@@ -236,7 +287,6 @@ const PropertyDetail = () => {
       {/* CONTENIDO PRINCIPAL */}
       <div className="max-w-4xl mx-auto -mt-6 relative bg-white rounded-t-3xl px-6 py-8 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] min-h-[50vh]">
         
-        {/* Título y Rating */}
         <div className="flex justify-between items-start mb-2">
             <div>
                 <h1 className="text-2xl font-bold text-gray-900 leading-tight">{propiedad.titulo}</h1>
@@ -305,7 +355,6 @@ const PropertyDetail = () => {
             <h3 className="font-bold text-lg mb-3 text-gray-900">Ubicación</h3>
             <div className="h-64 bg-gray-200 rounded-xl overflow-hidden relative shadow-sm border border-gray-100">
                 
-                {/* LÓGICA DE MAPA INTERACTIVO */}
                 {isLoaded && hasCoordinates ? (
                     <GoogleMap
                         mapContainerStyle={{ width: '100%', height: '100%' }}
@@ -316,18 +365,12 @@ const PropertyDetail = () => {
                             zoomControl: true,
                             streetViewControl: false,
                             mapTypeControl: false,
-                            
-                            // --- AGREGA ESTA LÍNEA ---
                             mapId: "DEMO_MAP_ID" 
-                            // "DEMO_MAP_ID" es un ID gratuito de Google para pruebas. 
-                            // Hace que el mapa cargue vectores (más fluido) en lugar de imágenes (cuadritos).
-                            // -------------------------
                         }}
                     >
                         <Marker position={mapCenter} />
                     </GoogleMap>
                 ) : (
-                    // FALLBACK: Si no hay coordenadas o no cargó, mostramos iframe genérico buscando por dirección
                     <iframe 
                         width="100%" 
                         height="100%" 

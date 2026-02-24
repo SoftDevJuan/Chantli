@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CreditCard, Lock, ChevronDown, Plus, ShieldCheck, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react';
+import { CreditCard, Lock, ChevronDown, Plus, ShieldCheck, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 const Checkout = () => {
   const { state } = useLocation(); 
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [verificando, setVerificando] = useState(true); // Nuevo estado de carga inicial
-  const [yaPagada, setYaPagada] = useState(false);      // Nuevo estado de bloqueo
+  const [verificando, setVerificando] = useState(true);
+  const [yaPagada, setYaPagada] = useState(false);      
   const [tarjetas, setTarjetas] = useState([]);
   const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState('');
   
@@ -21,7 +20,25 @@ const Checkout = () => {
   const AmexLogo = () => <img src="https://upload.wikimedia.org/wikipedia/commons/3/30/American_Express_logo.svg" alt="Amex" className="h-6 w-auto object-contain" />;
   const GenericCardIcon = () => <div className="h-6 w-9 bg-gray-200 rounded flex items-center justify-center border border-gray-300"><CreditCard className="h-4 w-4 text-gray-500" /></div>;
 
-  // Carga Inicial: Tarjetas y Verificación de Estado
+  // --- EFECTO PARA TECLA ESCAPE MEJORADO ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        // 1. Si hay un modal abierto (y no está cargando), cierra el modal
+        if (modalState.type !== 'loading' && modalState.type !== null) {
+          setModalState({ type: null, title: '', message: '' });
+        } 
+        // 2. Si NO hay modal abierto, salimos de la página de Checkout
+        else if (modalState.type === null) {
+          navigate(-1); // Regresa a la página anterior
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalState.type, navigate]);
+
   useEffect(() => {
     if (!state?.reservaId) return;
 
@@ -30,11 +47,7 @@ const Checkout = () => {
 
     const initData = async () => {
         try {
-            // 1. Cargar Tarjetas
             const reqTarjetas = fetch(`${API_URL}/api/tarjetas/`, { headers });
-            
-            // 2. Verificar estado REAL de la reserva (por si el usuario recarga la página)
-            // Asumimos que tienes un endpoint para ver el detalle de la reserva
             const reqReserva = fetch(`${API_URL}/api/reservas/${state.reservaId}/`, { headers });
 
             const [resTarjetas, resReserva] = await Promise.all([reqTarjetas, reqReserva]);
@@ -42,11 +55,9 @@ const Checkout = () => {
             const dataTarjetas = await resTarjetas.json();
             const dataReserva = await resReserva.json();
 
-            // Setear Tarjetas
             setTarjetas(dataTarjetas);
             if(dataTarjetas.length > 0) setTarjetaSeleccionada(dataTarjetas[0].id);
 
-            // Validar si ya está pagada
             if (dataReserva.estado === 'pagada' || dataReserva.estado === 'aceptada') {
                 setYaPagada(true);
             }
@@ -91,16 +102,14 @@ const Checkout = () => {
                 message: 'Tu reservación ha sido confirmada.' 
             });
         } else {
-            // Si el backend dice que ya está pagada, mostramos éxito en lugar de error
             if (data.error && data.error.includes("ya ha sido pagada")) {
-                setYaPagada(true); // Bloqueamos la UI
+                setYaPagada(true);
                 setModalState({ 
                     type: 'success', 
                     title: '¡Ya está pagado!',
                     message: 'Esta reserva ya fue cobrada anteriormente. No se realizó ningún cargo nuevo.' 
                 });
             } else {
-                // Otros errores (Fondos, etc)
                 let msg = "No pudimos completar la transacción.";
                 if (data.error && data.error.includes("Fondos insuficientes")) msg = "Saldo insuficiente en la tarjeta seleccionada.";
                 
@@ -136,29 +145,43 @@ const Checkout = () => {
   return (
     <div className="min-h-screen bg-gray-500 p-6 flex flex-col items-center justify-center relative">
        
-       {/* --- MODALES --- */}
+       {/* --- MODALES DE ESTADO DE PAGO --- */}
        {modalState.type !== null && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl flex flex-col items-center text-center animate-scale-in">
-                
+        <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+            onClick={() => modalState.type !== 'loading' && setModalState({ type: null, title: '', message: '' })} 
+        >
+            <div 
+            className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl flex flex-col items-center text-center animate-scale-in relative"
+            onClick={(e) => e.stopPropagation()} 
+            >
+                {modalState.type !== 'loading' && (
+                    <button 
+                        onClick={() => setModalState({ type: null, title: '', message: '' })}
+                        className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition focus:outline-none"
+                    >
+                        <XCircle className="h-6 w-6" />
+                    </button>
+                )}
+
                 {modalState.type === 'loading' && (
-                    <>
-                        <Loader2 className="h-12 w-12 text-brand-600 animate-spin mb-4" />
-                        <h3 className="text-xl font-bold text-gray-800">Procesando...</h3>
-                        <p className="text-sm text-gray-500 mt-2">Validando con el banco.</p>
-                    </>
+                    <div className="py-6 flex flex-col items-center">
+                        <Loader2 className="h-16 w-16 text-brand-600 animate-spin mb-4" />
+                        <h3 className="text-xl font-bold text-gray-800">Procesando pago...</h3>
+                        <p className="text-sm text-gray-500 mt-2">Por favor no cierres esta ventana.</p>
+                    </div>
                 )}
 
                 {modalState.type === 'success' && (
                     <>
-                        <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                        <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4 mt-2">
                             <CheckCircle className="h-10 w-10 text-green-600" />
                         </div>
                         <h3 className="text-xl font-bold text-gray-800 mb-2">{modalState.title}</h3>
                         <p className="text-sm text-gray-600 mb-6">{modalState.message}</p>
                         <button 
                             onClick={() => navigate('/invoices')} 
-                            className="w-full bg-green-600 text-gray-500 font-bold py-3 rounded-xl hover:bg-green-700 transition"
+                            className="w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition"
                         >
                             Ver Recibo
                         </button>
@@ -167,14 +190,14 @@ const Checkout = () => {
 
                 {modalState.type === 'failure' && (
                     <>
-                        <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                        <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-4 mt-2">
                             <XCircle className="h-10 w-10 text-red-500" />
                         </div>
                         <h3 className="text-xl font-bold text-gray-800 mb-2">{modalState.title}</h3>
                         <p className="text-sm text-gray-600 mb-6 bg-red-50 p-3 rounded-lg border border-red-100">{modalState.message}</p>
                         <div className="flex gap-3 w-full">
-                            <button onClick={() => navigate('/add-card', { state: { from: 'checkout' } })} className="flex-1 border border-gray-300 text-gray-600 font-bold py-3 rounded-xl text-sm">Otra tarjeta</button>
-                            <button onClick={() => setModalState({ type: null, title: '', message: '' })} className="flex-1 bg-gray-800 text-gray-500 font-bold py-3 rounded-xl text-sm">Reintentar</button>
+                            <button onClick={() => navigate('/add-card', { state: { from: 'checkout' } })} className="flex-1 border border-gray-300 text-gray-600 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition">Otra tarjeta</button>
+                            <button onClick={() => setModalState({ type: null, title: '', message: '' })} className="flex-1 bg-gray-800 text-white font-bold py-3 rounded-xl text-sm hover:bg-gray-900 transition">Reintentar</button>
                         </div>
                     </>
                 )}
@@ -182,8 +205,18 @@ const Checkout = () => {
          </div>
        )}
 
+       {/* --- PANTALLA PRINCIPAL DE CHECKOUT --- */}
        <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-8 relative overflow-hidden">
           
+          {/* NUEVO BOTÓN PARA CANCELAR/SALIR DEL CHECKOUT */}
+          <button 
+              onClick={() => navigate(-1)} 
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition"
+              title="Cancelar pago"
+          >
+              <XCircle className="h-7 w-7" />
+          </button>
+
           {/* CUBIERTA DE CARGA O BLOQUEO SI YA ESTÁ PAGADA */}
           {(verificando || yaPagada) && (
               <div className="absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-center p-6 backdrop-blur-sm">
@@ -194,7 +227,7 @@ const Checkout = () => {
                         <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
                         <h2 className="text-2xl font-bold text-gray-800">¡Reserva Pagada!</h2>
                         <p className="text-gray-500 mt-2 mb-6">Esta reserva ya fue liquidada correctamente.</p>
-                        <button onClick={() => navigate('/invoices')} className="px-6 py-3 bg-brand-600 text-gray-500 rounded-xl font-bold shadow-lg hover:bg-brand-700 transition">
+                        <button onClick={() => navigate('/invoices')} className="px-6 py-3 bg-brand-600 text-white rounded-xl font-bold shadow-lg hover:bg-brand-700 transition">
                             Ver mis Comprobantes
                         </button>
                       </>
@@ -202,7 +235,7 @@ const Checkout = () => {
               </div>
           )}
 
-          <h1 className="text-2xl font-bold mb-6 flex items-center text-gray-800">
+          <h1 className="text-2xl font-bold mb-6 mt-2 flex items-center text-gray-800">
              <Lock className="h-6 w-6 mr-2 text-brand-600" /> Confirmar Pago
           </h1>
           
@@ -262,7 +295,7 @@ const Checkout = () => {
              <button 
                 type="submit"
                 disabled={tarjetas.length === 0} 
-                className="w-full bg-brand-600 text-gray-400 font-bold py-4 rounded-xl shadow-lg hover:bg-brand-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg flex justify-center items-center gap-2"
+                className="w-full bg-brand-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-brand-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg flex justify-center items-center gap-2"
              >
                  <Lock className="h-5 w-5 opacity-80" /> 
                  Pagar ${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}

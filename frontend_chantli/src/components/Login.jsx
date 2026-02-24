@@ -66,6 +66,8 @@ const Login = () => {
     }
   };
 
+
+
   return (
     // 2. Envolver todo en el Provider con TU ID
     <GoogleOAuthProvider clientId="485296325778-9i5j0efprjtgil4v66cr1p46rg18sjne.apps.googleusercontent.com">
@@ -159,7 +161,8 @@ const Login = () => {
                         onError={() => setError('Falló el inicio de sesión con Google')}
                         useOneTap={false} // Puedes poner true si quieres que salga el popup automático arriba a la derecha
                         shape="pill"
-                        width="250" // Ajusta el ancho si lo ves muy chico
+                        width="250"
+                        use_fedcm_for_prompt={false} // Ajusta el ancho si lo ves muy chico
                     />
                 </div>
 

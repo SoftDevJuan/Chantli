@@ -96,6 +96,8 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
         # Protegemos estos campos para que nadie se "autoverifique" enviando True en el JSON
         read_only_fields = ['es_anfitrion_verificado', 'es_huesped_verificado', 'requiere_deposito_garantia', 'rol']
 
+
+
 class UserSerializer(serializers.ModelSerializer):
     # Campos individuales (los que ya tenías)
     rol = serializers.ReadOnlyField(source='perfil.rol')
@@ -134,18 +136,28 @@ class RegistroSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        # Sacamos el rol del diccionario porque no va en el modelo User
         rol = validated_data.pop('rol')
+        username = validated_data.get('username')
+        email = validated_data.get('email')
+
+        # 1. VALIDACIÓN PREVIA (Evita el error que mencionas)
+        if User.objects.filter(username=username).exists():
+            raise serializers.ValidationError({"username": "Este nombre de usuario ya está en uso."})
         
-        # 1. Crear Usuario Base
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError({"email": "Este correo ya está registrado."})
+
+        # 2. CREAR USUARIO (Solo si pasó la validación)
         user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
+            username=username,
+            email=email,
             password=validated_data['password']
         )
 
-        # 2. Crear Perfil con el Rol seleccionado
-        PerfilUsuario.objects.create(usuario=user, rol=rol)
+        PerfilUsuario.objects.update_or_create(
+            usuario=user,
+            defaults={'rol': rol}
+        )
         
         return user
     
@@ -249,3 +261,11 @@ class ResenaUsuarioSerializer(serializers.ModelSerializer):
         fields = '__all__'
         # --- AGREGA ESTA LÍNEA ---
         read_only_fields = ['autor', 'fecha']
+
+class FavoritoSerializer(serializers.ModelSerializer):
+    # Anidamos el serializer de la propiedad para que devuelva todos sus datos
+    propiedad = PropiedadSerializer(read_only=True)
+
+    class Meta:
+        model = Favorito
+        fields = ['id', 'propiedad', 'fecha_agregado']

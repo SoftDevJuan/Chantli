@@ -1,10 +1,10 @@
-from rest_framework import viewsets, permissions, status, filters
+from rest_framework import viewsets, permissions, status, filters, generics
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
-
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from django.shortcuts import get_object_or_404
 # Asegúrate de importar tus modelos y el serializer
 from .models import Pago, Reserva, Tarjeta
 from .serializers import PagoSerializer
@@ -28,11 +28,8 @@ from django.core.files.base import ContentFile
 from xhtml2pdf import pisa
 from django.conf import settings
 
-
-
-class ReservaViewSet(viewsets.ModelViewSet):
-    queryset = Reserva.objects.all()
-    serializer_class = ReservaSerializer
+# --- IMPORTACIÓN DE WEB PUSH ---
+from webpush import send_user_notification
 
 
 class PropiedadViewSet(viewsets.ModelViewSet):
@@ -66,7 +63,6 @@ class PropiedadViewSet(viewsets.ModelViewSet):
             return Response({"error": "Error al verificar tu perfil."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Si pasa la validación, dejamos que Django siga normal.
-        # Esto llamará internamente a tu 'perform_create' de abajo.
         return super().create(request, *args, **kwargs)
 
     # --- 2. TU MÉTODO EXISTENTE (Se queda igual) ---
@@ -81,7 +77,6 @@ class PropiedadViewSet(viewsets.ModelViewSet):
         for imagen in imagenes_extra:
             FotoPropiedad.objects.create(propiedad=propiedad, imagen=imagen)
 
-    # --- RESTO DE TUS ACCIONES (Se quedan igual) ---
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def mis_propiedades(self, request):
@@ -169,12 +164,6 @@ class NotificacionViewSet(viewsets.ReadOnlyModelViewSet):
         notificacion.save()
         return Response({'status': 'ok'})
 
-    
-
-
-
-
-
 
 # --- VISTA DE MENSAJES (CHAT) ---
 class MensajeViewSet(viewsets.ModelViewSet):
@@ -185,7 +174,16 @@ class MensajeViewSet(viewsets.ModelViewSet):
         return Mensaje.objects.filter(Q(remitente=self.request.user) | Q(destinatario=self.request.user))
 
     def perform_create(self, serializer):
-        serializer.save(remitente=self.request.user)
+        mensaje = serializer.save(remitente=self.request.user)
+        
+        # --- NUEVO: PUSH NOTIFICATION PARA EL CHAT ---
+        remitente_nombre = self.request.user.first_name or self.request.user.username
+        payload = {
+            "head": f"Nuevo mensaje de {remitente_nombre}",
+            "body": mensaje.contenido[:40] + "..." if len(mensaje.contenido) > 40 else mensaje.contenido,
+            "url": "/inbox"
+        }
+        send_user_notification(user=mensaje.destinatario, payload=payload, ttl=1000)
 
     # --- 1. Obtener conteo de NO LEÍDOS ---
     @action(detail=False, methods=['get'])
@@ -236,7 +234,6 @@ class MensajeViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def inbox(self, request):
         user = request.user
-        # 1. Traer todos los mensajes donde soy remitente O destinatario
         mensajes = Mensaje.objects.filter(
             Q(remitente=user) | Q(destinatario=user)
         ).select_related('remitente__perfil', 'destinatario__perfil').order_by('-fecha')
@@ -244,12 +241,9 @@ class MensajeViewSet(viewsets.ModelViewSet):
         conversaciones = {}
         
         for msg in mensajes:
-            # Identificar quién es la "otra persona"
             otro_usuario = msg.destinatario if msg.remitente == user else msg.remitente
             
-            # Si ya guardamos la conversación con este usuario, saltamos (porque ya tenemos el más reciente)
             if otro_usuario.id not in conversaciones:
-                # Datos básicos para mostrar en la lista
                 foto_url = None
                 try:
                     if otro_usuario.perfil.foto_perfil:
@@ -263,15 +257,10 @@ class MensajeViewSet(viewsets.ModelViewSet):
                     'foto': foto_url,
                     'ultimo_mensaje': msg.contenido,
                     'fecha': msg.fecha,
-                    'es_mio': msg.remitente == user # Para saber si dice "Tú: Hola"
+                    'es_mio': msg.remitente == user 
                 }
 
         return Response(conversaciones.values())
-
-
-
-
-
 
 
 class ReservaViewSet(viewsets.ModelViewSet):
@@ -279,32 +268,35 @@ class ReservaViewSet(viewsets.ModelViewSet):
     serializer_class = ReservaSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    # Endpoint para ver solicitudes recibidas: /api/reservas/solicitudes_recibidas/
     @action(detail=False, methods=['get'])
     def solicitudes_recibidas(self, request):
-        # Buscamos reservas donde la propiedad pertenece al usuario actual
         reservas = Reserva.objects.filter(propiedad__anfitrion=request.user).order_by('-fecha_creacion')
         serializer = self.get_serializer(reservas, many=True)
         return Response(serializer.data)
 
-    # Endpoint para aceptar/rechazar: PATCH /api/reservas/{id}/responder/
-
-
     def perform_create(self, serializer):
         reserva = serializer.save(huesped=self.request.user)
-        # Crear notificación para el dueño
         dueño = reserva.propiedad.anfitrion
+        
+        # 1. Notificación interna (Base de datos)
         Notificacion.objects.create(
             usuario=dueño,
             mensaje=f"Nueva solicitud de reserva para {reserva.propiedad.titulo}",
             reserva_id=reserva.id
         )
 
-    # 2. Cuando el Dueño responde -> Notificar al Huésped
+        # 2. --- NUEVO: PUSH NOTIFICATION AL ANFITRIÓN ---
+        payload = {
+            "head": "Nueva Solicitud de Reserva",
+            "body": f"{self.request.user.first_name or self.request.user.username} quiere rentar tu propiedad.",
+            "url": "/host" 
+        }
+        send_user_notification(user=dueño, payload=payload, ttl=1000)
+
     @action(detail=True, methods=['patch'])
     def responder(self, request, pk=None):
         reserva = self.get_object()
-        nuevo_estado = request.data.get('estado') # 'esperando_pago' o 'rechazada'
+        nuevo_estado = request.data.get('estado')
         
         if reserva.propiedad.anfitrion != request.user:
             return Response({'error': 'No autorizado'}, status=403)
@@ -319,14 +311,34 @@ class ReservaViewSet(viewsets.ModelViewSet):
                 mensaje=f"¡Tu solicitud en {reserva.propiedad.titulo} fue ACEPTADA! Realiza el pago para confirmar.",
                 reserva_id=reserva.id
             )
+            # --- NUEVO: PUSH NOTIFICATION AL HUÉSPED ---
+            payload = {
+                "head": "¡Reserva Aceptada! 🎉",
+                "body": f"El anfitrión aceptó tu solicitud para {reserva.propiedad.titulo}. Entra para pagar.",
+                "url": "/home" # Puedes mandarlo a un listado de reservas pendientes
+            }
+            send_user_notification(user=reserva.huesped, payload=payload, ttl=1000)
+
+        elif nuevo_estado == 'rechazada':
+            Notificacion.objects.create(
+                usuario=reserva.huesped,
+                mensaje=f"Tu solicitud en {reserva.propiedad.titulo} fue rechazada.",
+                reserva_id=reserva.id
+            )
+            # --- NUEVO: PUSH NOTIFICATION AL HUÉSPED ---
+            payload = {
+                "head": "Reserva Rechazada",
+                "body": f"Lo sentimos, el anfitrión no aceptó la solicitud para {reserva.propiedad.titulo}.",
+                "url": "/home"
+            }
+            send_user_notification(user=reserva.huesped, payload=payload, ttl=1000)
+
         
         return Response({'status': 'ok', 'estado': reserva.estado})
     
 
-
 class CurrentUserView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    # 2. AGREGAR ESTA LÍNEA MÁGICA
     parser_classes = (MultiPartParser, FormParser) 
 
     def get(self, request):
@@ -334,14 +346,11 @@ class CurrentUserView(APIView):
         return Response(serializer.data)
 
     def patch(self, request):
-        # Ya no necesitamos hacer copias ni bucles for.
-        # Solo aseguramos pasar el contexto.
-        
         serializer = UserUpdateSerializer(
             request.user, 
             data=request.data, 
             partial=True,
-            context={'request': request} # <--- Esto es lo vital
+            context={'request': request}
         )
 
         if serializer.is_valid():
@@ -357,7 +366,6 @@ class RegistroView(APIView):
         serializer = RegistroSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            # Generamos el token inmediatamente para que ya quede logueado
             token, created = Token.objects.get_or_create(user=user)
             return Response({
                 'token': token.key,
@@ -366,33 +374,28 @@ class RegistroView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 # B. LOGIN/REGISTRO CON GOOGLE
 class GoogleLoginView(APIView):
     def post(self, request):
         token_google = request.data.get('token')
-        rol_seleccionado = request.data.get('rol', 'huesped') # Por defecto huesped si no especifican
+        rol_seleccionado = request.data.get('rol', 'huesped')
 
         try:
-            # 1. Validar el token con los servidores de Google
-            # (Reemplaza 'TU_CLIENT_ID' con el ID que te da Google Cloud Console)
             CLIENT_ID = "485296325778-9i5j0efprjtgil4v66cr1p46rg18sjne.apps.googleusercontent.com" 
             idinfo = id_token.verify_oauth2_token(token_google, google_requests.Request(), CLIENT_ID)
 
             email = idinfo['email']
-            username = email.split('@')[0] # Usamos la parte antes del @ como usuario
+            username = email.split('@')[0]
 
-            # 2. Verificar si el usuario ya existe
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
-                # 3. Si no existe, lo CREAMOS automágicamente
                 user = User.objects.create_user(username=username, email=email)
-                user.set_unusable_password() # No tendrá contraseña porque entra con Google
+                user.set_unusable_password()
                 user.save()
-                # Creamos su perfil
                 PerfilUsuario.objects.create(usuario=user, rol=rol_seleccionado)
 
-            # 4. Generar Token de Django
             token, created = Token.objects.get_or_create(user=user)
             
             return Response({'token': token.key, 'username': user.username})
@@ -401,14 +404,11 @@ class GoogleLoginView(APIView):
             return Response({'error': 'Token de Google inválido'}, status=status.HTTP_400_BAD_REQUEST)
         
 
-
-class PagoViewSet(viewsets.ModelViewSet):  # <--- CAMBIO IMPORTANTE: ModelViewSet
+class PagoViewSet(viewsets.ModelViewSet):
     serializer_class = PagoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    # Esto soluciona el error 404 al entrar a /api/pagos/
     def get_queryset(self):
-        """Devuelve solo los pagos del usuario logueado, ordenados por fecha."""
         return Pago.objects.filter(pagador=self.request.user).order_by('-fecha_pago')
 
     @action(detail=False, methods=['post'])
@@ -416,108 +416,70 @@ class PagoViewSet(viewsets.ModelViewSet):  # <--- CAMBIO IMPORTANTE: ModelViewSe
         reserva_id = request.data.get('reserva_id')
         tarjeta_id = request.data.get('tarjeta_id')
 
-        print(f"\n--- INICIO PROCESO DE PAGO AVANZADO ---")
-
         try:
-            # 1. VALIDACIÓN ANTI-DUPLICADOS
             if Pago.objects.filter(reserva_id=reserva_id).exists():
                 return Response({'error': 'Esta reserva ya ha sido pagada previamente.'}, status=400)
 
-            # 2. OBTENER OBJETOS
             reserva = Reserva.objects.get(id=reserva_id)
             guest_card = Tarjeta.objects.get(id=tarjeta_id, usuario=request.user)
             
-            # --- NUEVO: Validar Disponibilidad de Fechas ---
-            # Buscamos si hay OTRA reserva pagada/aceptada que choque con estas fechas en la misma propiedad
             choques = Reserva.objects.filter(
                 propiedad=reserva.propiedad,
-                estado__in=['pagada', 'aceptada'], # Solo nos importan las confirmadas
+                estado__in=['pagada', 'aceptada'],
                 fecha_inicio__lt=reserva.fecha_fin,
                 fecha_fin__gt=reserva.fecha_inicio
-            ).exclude(id=reserva.id) # Nos excluimos a nosotros mismos
+            ).exclude(id=reserva.id)
 
             if choques.exists():
                 return Response({'error': 'Las fechas seleccionadas ya no están disponibles. Alguien ganó la reserva.'}, status=400)
 
-            # 3. CÁLCULO DE TIEMPO Y COSTOS (PRORRATEO)
-            # Calculamos cuántos días se va a quedar
             dias_totales = (reserva.fecha_fin - reserva.fecha_inicio).days
-            
-            # Validación mínima de días (ej. mínimo 1 día)
             if dias_totales < 1: dias_totales = 1
 
             precio_mensual = Decimal(str(reserva.propiedad.precio))
-            precio_diario = precio_mensual / Decimal('30') # Estandarizamos mes de 30 días
-            
-            # Renta Exacta por los días seleccionados
+            precio_diario = precio_mensual / Decimal('30')
             renta_calculada = precio_diario * Decimal(dias_totales)
-            
-            # Depósito: Usualmente se cobra 1 mes completo de garantía, independientemente de los días
             deposito = precio_mensual 
-            
-            # IVA (16% sobre la renta de esos días)
             impuesto = renta_calculada * Decimal('0.16')
-            
-            # Total Final
             total_a_cobrar = renta_calculada + deposito + impuesto
 
-            # 4. VALIDAR FONDOS HUÉSPED
             if guest_card.saldo < total_a_cobrar:
                 return Response({'error': f'Fondos insuficientes. Total a pagar: ${total_a_cobrar:,.2f}'}, status=400)
 
-            # --- LOGÍSTICA DE DISPERSIÓN DE PAGOS (LA MAGIA) ---
-            
-            # A) Buscar la cuenta del ADMIN (Donde cae todo primero)
-            # Asumimos que el primer superusuario es el dueño de la App
-            from django.contrib.auth.models import User
             admin_user = User.objects.filter(is_superuser=True).first()
             if not admin_user:
                 return Response({'error': 'Configuración crítica: No existe usuario Administrador para recibir fondos.'}, status=500)
             
-            # Buscamos tarjeta del Admin (debe tener una creada en el sistema para recibir)
             admin_card = Tarjeta.objects.filter(usuario=admin_user).first()
             if not admin_card:
                 return Response({'error': 'El Administrador no tiene una cuenta configurada para recibir pagos.'}, status=500)
 
-            # B) Buscar la cuenta del ANFITRION (Dueño de la casa)
             host_user = reserva.propiedad.anfitrion
             host_card = Tarjeta.objects.filter(usuario=host_user).first()
             if not host_card:
                 return Response({'error': f'El anfitrión {host_user.first_name} no ha registrado una cuenta para recibir su dinero.'}, status=400)
 
-            # 5. EJECUTAR TRANSACCIONES
-            
-            # PASO A: Cobrar al Huésped
+            # EJECUTAR TRANSACCIONES
             guest_card.saldo -= total_a_cobrar
             guest_card.save()
 
-            # PASO B: Todo el dinero cae al Admin
             admin_card.saldo += total_a_cobrar
             admin_card.save()
 
-            # PASO C: Calcular la parte del Anfitrión
-            # La app se queda con el 5% de la RENTA (no del depósito ni impuestos, eso se suele pasar íntegro o depende de tu contabilidad)
-            # Aquí asumiremos:
-            # Anfitrión recibe: (Renta - 5%) + Depósito + Impuestos (para que él los declare)
             comision_app = renta_calculada * Decimal('0.05')
             ganancia_anfitrion = total_a_cobrar - comision_app
 
-            # PASO D: Transferir del Admin al Anfitrión
             if admin_card.saldo >= ganancia_anfitrion:
                 admin_card.saldo -= ganancia_anfitrion
                 host_card.saldo += ganancia_anfitrion
                 
                 admin_card.save()
                 host_card.save()
-            else:
-                # Esto no debería pasar matemáticamente, pero por seguridad
-                print("⚠️ Error Crítico: La cuenta admin no tiene fondos tras recibir el pago.")
 
-            # 6. CREAR REGISTRO DE PAGO
             pago = Pago.objects.create(
                 reserva=reserva,
                 pagador=request.user,
-                monto_renta=renta_calculada, # Guardamos el exacto calculado
+                monto_renta=renta_calculada,
                 monto_deposito=deposito,
                 comision_app=comision_app,
                 ganancia_anfitrion=ganancia_anfitrion,
@@ -527,12 +489,11 @@ class PagoViewSet(viewsets.ModelViewSet):  # <--- CAMBIO IMPORTANTE: ModelViewSe
             reserva.estado = 'pagada'
             reserva.save()
 
-            # 7. GENERACIÓN DE PDF Y CORREO (Tu código existente aquí)
             try:
                 context = {
                     'pago': pago, 
                     'impuesto': impuesto, 
-                    'dias': dias_totales, # Enviamos días al recibo
+                    'dias': dias_totales,
                     'precio_diario': precio_diario
                 }
                 html_string = render_to_string('recibo_pago.html', context)
@@ -544,7 +505,6 @@ class PagoViewSet(viewsets.ModelViewSet):  # <--- CAMBIO IMPORTANTE: ModelViewSe
                     pago.pdf_factura.save(filename, ContentFile(pdf_file.getvalue()))
                     pago.save()
                     
-                    # Email logic...
                     email = EmailMessage(
                         f'Tu Recibo - Reserva #{reserva.id}',
                         f'Pago confirmado por {dias_totales} días.',
@@ -556,7 +516,31 @@ class PagoViewSet(viewsets.ModelViewSet):  # <--- CAMBIO IMPORTANTE: ModelViewSe
             except Exception as e:
                 print(f"⚠️ Error PDF: {e}")
 
-            # 8. RESPUESTA
+            # --- NUEVO: PUSH NOTIFICATIONS DESPUÉS DE UN PAGO EXITOSO ---
+            
+            # Notificar al Dueño (Host)
+            Notificacion.objects.create(
+                usuario=host_user,
+                mensaje=f"¡Has recibido un pago de ${ganancia_anfitrion:,.2f} por tu propiedad {reserva.propiedad.titulo}!",
+                reserva_id=reserva.id
+            )
+            payload_host = {
+                "head": "¡Pago Recibido! 💰",
+                "body": f"Se acreditó el pago de tu reserva en {reserva.propiedad.titulo}.",
+                "url": "/host"
+            }
+            send_user_notification(user=host_user, payload=payload_host, ttl=1000)
+
+            # Notificar al Huésped (El que pagó)
+            payload_guest = {
+                "head": "Pago Exitoso ✅",
+                "body": f"Tu estadía en {reserva.propiedad.titulo} está 100% confirmada.",
+                "url": "/invoices"
+            }
+            send_user_notification(user=request.user, payload=payload_guest, ttl=1000)
+
+            # -------------------------------------------------------------
+
             factura_texto = (
                 f"Días: {dias_totales}\n"
                 f"Renta ({dias_totales} días): ${renta_calculada:,.2f}\n"
@@ -573,7 +557,6 @@ class PagoViewSet(viewsets.ModelViewSet):  # <--- CAMBIO IMPORTANTE: ModelViewSe
             })
 
         except Exception as e:
-            print(f"❌ ERROR: {str(e)}")
             return Response({'error': str(e)}, status=500)
     
 
@@ -581,11 +564,9 @@ class TarjetaViewSet(viewsets.ModelViewSet):
     serializer_class = TarjetaSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    # Solo mostrar las tarjetas DEL usuario logueado
     def get_queryset(self):
         return Tarjeta.objects.filter(usuario=self.request.user)
 
-    # Al crear, asignar automáticamente el usuario y saldo en 0
     def perform_create(self, serializer):
         serializer.save(usuario=self.request.user, saldo=0.00)
 
@@ -596,18 +577,15 @@ class PerfilUsuarioViewSet(viewsets.ModelViewSet):
     queryset = PerfilUsuario.objects.all()
 
     def get_object(self):
-        # Esta lógica es vital para evitar errores de "Perfil no existe"
         obj, created = PerfilUsuario.objects.get_or_create(usuario=self.request.user)
         return obj
 
-    # Acción para subir documentos sensibles (INE, Constancias)
     @action(detail=False, methods=['patch'], parser_classes=[MultiPartParser, FormParser])
     def subir_documentos(self, request):
         perfil = self.get_object()
         serializer = self.get_serializer(perfil, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            # Lógica extra (quitar depósito si sube constancia)
             if perfil.constancia_estudios_trabajo:
                 perfil.requiere_deposito_garantia = False
                 perfil.save()
@@ -616,33 +594,27 @@ class PerfilUsuarioViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
     def admin_pendientes(self, request):
-        # Buscamos perfiles que tengan al menos una identificación subida
-        # y que falte alguna verificación (anfitrión o huésped)
         perfiles = PerfilUsuario.objects.filter(
             Q(identificacion_frente__isnull=False) | Q(constancia_estudios_trabajo__isnull=False)
-        ).order_by('-id') # Los más recientes primero
+        ).order_by('-id')
         
         serializer = self.get_serializer(perfiles, many=True)
         return Response(serializer.data)
 
-    # 2. Acción para APROBAR o RECHAZAR (Toggle)
     @action(detail=True, methods=['patch'], permission_classes=[IsAdminUser])
     def admin_verificar(self, request, pk=None):
-        # Nota: Aquí pk es el ID del PERFIL, no del usuario
         try:
             perfil = PerfilUsuario.objects.get(pk=pk)
         except PerfilUsuario.DoesNotExist:
             return Response({"error": "Perfil no encontrado"}, status=404)
 
-        # Recibimos qué queremos verificar: 'anfitrion' o 'huesped'
-        tipo = request.data.get('tipo') # 'anfitrion' | 'huesped'
-        valor = request.data.get('valor') # true | false
+        tipo = request.data.get('tipo')
+        valor = request.data.get('valor')
 
         if tipo == 'anfitrion':
             perfil.es_anfitrion_verificado = valor
         elif tipo == 'huesped':
             perfil.es_huesped_verificado = valor
-            # Si verificamos al huésped, quitamos el depósito obligatorio
             if valor: perfil.requiere_deposito_garantia = False
         
         perfil.save()
@@ -655,29 +627,20 @@ class ResenaViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        # 1. Empezamos con todas las reseñas
         queryset = Resena.objects.all()
-        
-        # 2. Buscamos si en la URL viene el parámetro 'propiedad'
-        # (Ejemplo: /api/resenas/?propiedad=5)
         propiedad_id = self.request.query_params.get('propiedad')
-        
-        # 3. Si existe, filtramos
         if propiedad_id:
             queryset = queryset.filter(propiedad_id=propiedad_id)
-            
-        # 4. Ordenamos por las más recientes primero
         return queryset.order_by('-fecha')
 
     def perform_create(self, serializer):
-        # VALIDACIÓN: ¿El usuario realmente rentó aquí?
         usuario = self.request.user
         propiedad_id = self.request.data.get('propiedad')
         
         tiene_reserva = Reserva.objects.filter(
             huesped=usuario, 
             propiedad_id=propiedad_id,
-            estado__in=['pagada', 'finalizada'] # Solo si ya pagó
+            estado__in=['pagada', 'finalizada']
         ).exists()
 
         if not tiene_reserva:
@@ -694,7 +657,6 @@ class ResenaUsuarioViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(autor=self.request.user)
         
-    # Endpoint para obtener reseñas de un usuario específico
     @action(detail=False, methods=['get'])
     def usuario(self, request):
         user_id = request.query_params.get('id')
@@ -702,14 +664,52 @@ class ResenaUsuarioViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(resenas, many=True)
         return Response(serializer.data)
 
-# Endpoint público para obtener datos básicos de CUALQUIER usuario
-from rest_framework.views import APIView
+
 class PublicUserProfileView(APIView):
     def get(self, request, pk):
         try:
             user = User.objects.get(pk=pk)
-            # Reutilizamos el UserSerializer que ya tienes (asegúrate que incluya perfil)
             serializer = UserSerializer(user) 
             return Response(serializer.data)
         except User.DoesNotExist:
             return Response(status=404)
+        
+
+class FavoritoViewSet(viewsets.ModelViewSet):
+    serializer_class = FavoritoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Favorito.objects.filter(usuario=self.request.user).order_by('-fecha_agregado')
+
+    @action(detail=False, methods=['post'])
+    def toggle(self, request):
+        propiedad_id = request.data.get('propiedad_id')
+        if not propiedad_id:
+            return Response({'error': 'ID de propiedad requerido'}, status=status.HTTP_400_BAD_REQUEST)
+
+        propiedad = get_object_or_404(Propiedad, id=propiedad_id)
+        
+        favorito, created = Favorito.objects.get_or_create(
+            usuario=request.user, 
+            propiedad=propiedad
+        )
+        
+        if not created:
+            favorito.delete()
+            return Response({'status': 'removido', 'is_favorite': False})
+        
+        return Response({'status': 'agregado', 'is_favorite': True})
+
+    @action(detail=False, methods=['get'])
+    def check(self, request):
+        propiedad_id = request.query_params.get('propiedad')
+        if not propiedad_id:
+            return Response({'error': 'Falta el parámetro propiedad'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        is_favorite = Favorito.objects.filter(
+            usuario=request.user, 
+            propiedad_id=propiedad_id
+        ).exists()
+        
+        return Response({'is_favorite': is_favorite})

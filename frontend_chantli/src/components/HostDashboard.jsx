@@ -100,9 +100,19 @@ const HostDashboard = () => {
       {/* HEADER */}
       <div className="bg-white px-4 py-4 shadow-sm sticky top-0 z-10">
         <div className="flex items-center justify-between mb-4">
-            <button onClick={() => navigate('/home')} className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition">
-                <ArrowLeft className="h-6 w-6 text-gray-700" />
-            </button>
+             <div className="flex items-center gap-1">
+                        <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-gray-100 transition">
+                            <ArrowLeft className="h-6 w-6 text-gray-700" />
+                        </button>
+                        {/* Botón de escape rápido a Home */}
+                        <button 
+                            onClick={() => navigate('/home')} 
+                            className="p-2 rounded-full hover:bg-brand-50 transition text-brand-600"
+                            title="Ir al Inicio"
+                        >
+                            <Home className="h-6 w-6" />
+                        </button>
+                    </div>
             <h1 className="text-lg font-bold text-gray-900">Panel de Anfitrión</h1>
             <div className="w-8"></div>
         </div>

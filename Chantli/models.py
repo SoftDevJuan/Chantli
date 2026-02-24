@@ -189,3 +189,19 @@ class Mensaje(models.Model):
 
     class Meta:
         ordering = ['fecha']
+
+
+    
+class Favorito(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favoritos')
+    propiedad = models.ForeignKey('Propiedad', on_delete=models.CASCADE, related_name='favoritada_por')
+    fecha_agregado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # Esto evita que un usuario agregue la misma casa a favoritos dos veces
+        unique_together = ('usuario', 'propiedad') 
+        verbose_name = 'Favorito'
+        verbose_name_plural = 'Favoritos'
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.propiedad.titulo}"

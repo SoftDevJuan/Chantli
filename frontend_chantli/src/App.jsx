@@ -15,6 +15,7 @@ import AddCard from './components/AddCard';
 import Invoices from './components/Invoices';
 import VerificationProfile from './components/VerificationProfile';
 import AdminVerifications from './components/AdminVerifications';
+import Favorites from './components/Favorites';
 
 
 
@@ -37,10 +38,57 @@ function App() {
         <Route path="/add-card" element={<AddCard />} />
         <Route path="/invoices" element={<Invoices />} />
         <Route path="/verification" element={<VerificationProfile />} />
-        <Route path="/admin-panel" element={<AdminVerifications />} />      
+        <Route path="/admin-panel" element={<AdminVerifications />} />   
+        <Route path="/favorites" element={<Favorites />} />   
       </Routes>
     </BrowserRouter>
   );
+
+  
 }
+
+const PUBLIC_VAPID_KEY = 'BFNNtkj2cYP6XF7DhCKi637rSmn5orTcWMHiFFZCQQAdNoihC_pgr7Q0Gr2XYi6T1S5h74-AgbcvagVw1C5Qf-o'; // La misma del Paso 1
+
+// Función mágica para convertir la llave al formato que pide el navegador
+const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)));
+};
+
+export const subscribeToPushNotifications = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    const registration = await navigator.serviceWorker.ready;
+
+    try {
+        // Pedimos la suscripción al navegador (Google/Apple)
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+        });
+
+        // Enviamos esa suscripción a nuestro Django
+        const token = localStorage.getItem('chantli_token');
+        await fetch(`${import.meta.env.VITE_API_URL}/webpush/save_information/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${token}`
+            },
+            body: JSON.stringify({
+                status_type: 'subscribe',
+                subscription: subscription.toJSON(),
+                browser: navigator.userAgent,
+                endpoint: subscription.endpoint
+            })
+        });
+        
+        console.log("¡Suscripción Push Exitosa!");
+    } catch (error) {
+        console.error("Error al suscribir al Push:", error);
+    }
+};
 
 export default App;

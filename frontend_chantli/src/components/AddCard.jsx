@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CreditCard, ArrowLeft, Save } from 'lucide-react';
+import { CreditCard, ArrowLeft, Save, Home } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -64,6 +64,13 @@ const AddCard = () => {
             <button onClick={() => navigate(-1)} className="mr-3 p-2 hover:bg-gray-100 rounded-full">
                 <ArrowLeft className="h-5 w-5 text-gray-600" />
             </button>
+            <button 
+                            onClick={() => navigate('/home')} 
+                            className="p-2 rounded-full hover:bg-brand-50 transition text-brand-600"
+                            title="Ir al Inicio"
+                        >
+                            <Home className="h-6 w-6" />
+                        </button>
             <h1 className="text-xl font-bold text-gray-900">Nueva Tarjeta</h1>
         </div>
 

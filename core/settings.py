@@ -17,6 +17,9 @@ env = environ.Env(
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 STATIC_ROOT = '/var/www/Chantli/staticfiles/'
 STATIC_URL = 'static/'
+LANGUAGE_CODE = 'es-mx'
+USE_I18N = True
+USE_L10N = True
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -43,8 +46,14 @@ INSTALLED_APPS = [
     'Chantli',
     'corsheaders',
     'rest_framework.authtoken',
+    'webpush',
 ]
 
+WEBPUSH_SETTINGS = {
+    "VAPID_PUBLIC_KEY": "BFNNtkj2cYP6XF7DhCKi637rSmn5orTcWMHiFFZCQQAdNoihC_pgr7Q0Gr2XYi6T1S5h74-AgbcvagVw1C5Qf-o",
+    "VAPID_PRIVATE_KEY": "HqpMPWWUuF2vr9Yi_Zy9QLXN7zUeVImkD0H7Hdcml6w",
+    "VAPID_ADMIN_EMAIL": "juan.gonzalez@ccljalisco.gob.mx" # Un correo de contacto
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -55,7 +64,6 @@ REST_FRAMEWORK = {
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -73,7 +81,9 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 CSRF_TRUSTED_ORIGINS = [
     "https://chantli.online",
-    "https://www.chantli.online"
+    "https://www.chantli.online",
+    "http://localhost:8000",
+    "http://localhost:5173",
 ]
 
 ROOT_URLCONF = 'core.urls'

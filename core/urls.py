@@ -8,6 +8,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('Chantli.urls')),
     path('api-token-auth/', views.obtain_auth_token),
+    path('webpush/', include('webpush.urls')),
     
 ] 
 if settings.DEBUG:

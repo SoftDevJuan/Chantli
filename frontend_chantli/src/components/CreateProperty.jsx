@@ -62,7 +62,7 @@ const CreateProperty = () => {
             const res = await fetch(`${API_URL}/api/me/`, { headers: { 'Authorization': `Token ${token}` } });
             const user = await res.json();
             if (!user.is_superuser && !user.perfil?.es_anfitrion_verificado) {
-                alert("🔒 ACCESO DENEGADO"); navigate('/profile');
+                alert("🔒 Acceso denegado, necesitas verificar tu perfil para crear propiedades"); navigate('/profile');
             } else { setVerifying(false); }
         } catch { navigate('/'); }
     };

@@ -44,7 +44,8 @@ export default defineConfig({
           /^\/api/, 
           /^\/media/,
           /^\/static/
-        ]
+        ],
+        importScripts: ['/custom-sw.js']
       }
     })
   ],

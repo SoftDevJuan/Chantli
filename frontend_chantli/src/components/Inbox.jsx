@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, User } from 'lucide-react';
+import { ArrowLeft, MessageSquare, User, Home } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -39,6 +39,13 @@ const Inbox = () => {
             <button onClick={() => navigate('/home')} className="mr-3 p-2 rounded-full hover:bg-gray-50">
                 <ArrowLeft className="h-6 w-6 text-gray-700" />
             </button>
+            <button 
+                onClick={() => navigate('/home')} 
+                className="p-2 rounded-full hover:bg-brand-50 transition text-brand-600"
+                title="Ir al Inicio">
+            <Home className="h-6 w-6" />
+            </button>
+            
             <h1 className="text-xl font-bold text-gray-900">Mensajes</h1>
         </div>
       </div>

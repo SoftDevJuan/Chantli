@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, ArrowLeft } from 'lucide-react';
+import { Send, ArrowLeft, Home } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -83,6 +83,12 @@ const Chat = () => {
       <div className="bg-white px-4 py-3 shadow-sm flex items-center sticky top-0 z-40 border-b border-gray-100">
         <button onClick={() => navigate(-1)} className="mr-3 p-2 rounded-full hover:bg-gray-100">
             <ArrowLeft className="h-6 w-6 text-gray-700" />
+        </button>
+        <button 
+            onClick={() => navigate('/home')} 
+            className="p-2 rounded-full hover:bg-brand-50 transition text-brand-600"
+            title="Ir al Inicio">
+            <Home className="h-6 w-6" />
         </button>
         
         {otroUsuario ? (

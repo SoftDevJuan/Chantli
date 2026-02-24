@@ -17,6 +17,9 @@ const Home = () => {
   const [propiedades, setPropiedades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  
+  // NUEVO ESTADO PARA NOTIFICACIONES GENERALES
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   // --- ESTADOS DE BÚSQUEDA ---
   const [searchText, setSearchText] = useState('');
@@ -81,6 +84,12 @@ const Home = () => {
             .then(r => r.ok ? r.json() : { count: 0 })
             .then(data => setUnreadMessages(data.count))
             .catch(console.error);
+            
+        // EJEMPLO: Verificar si hay notificaciones generales (Ajusta el endpoint si tienes uno)
+        // fetch(`${API_URL}/api/notificaciones/unread/`, { headers })
+        //    .then(r => r.ok ? r.json() : { has_unread: false })
+        //    .then(data => setHasUnreadNotifications(data.has_unread))
+        //    .catch(console.error);
     } else {
         setIsHost(false);
         setIsAdmin(false);
@@ -163,7 +172,10 @@ const Home = () => {
                         className="p-2 bg-white rounded-full border border-gray-100 shadow-sm relative active:scale-95 transition-transform hover:bg-gray-50"
                     >
                         <Bell className="h-5 w-5 text-gray-600" />
-                        <span className="absolute top-1 right-2 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
+                        {/* SOLO MUESTRA EL PUNTO SI HAY NOTIFICACIONES */}
+                        {hasUnreadNotifications && (
+                            <span className="absolute top-1 right-2 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
+                        )}
                     </button>
 
                     <div 
@@ -292,13 +304,15 @@ const Home = () => {
         )}
       </div>
 
-      {/* --- FAB (CREAR) --- */}
-      <button 
-        onClick={() => navigate('/create')}
-        className="fixed bottom-24 right-4 h-14 w-14 bg-brand-600 text-gray-800 rounded-full shadow-xl shadow-brand-200 flex items-center justify-center hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all z-40"
-      >
-        <Plus className="h-8 w-8" />
-      </button>
+      {/* --- FAB (CREAR) SOLO PARA ANFITRIONES --- */}
+      {isHost && (
+          <button 
+            onClick={() => navigate('/create')}
+            className="fixed bottom-24 right-4 h-14 w-14 bg-brand-600 text-gray-800 rounded-full shadow-xl shadow-brand-200 flex items-center justify-center hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all z-40"
+          >
+            <Plus className="h-8 w-8" />
+          </button>
+      )}
 
       {/* --- NAVBAR INFERIOR --- */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-around items-center z-50 h-[70px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
@@ -308,7 +322,11 @@ const Home = () => {
             <span className="text-[10px] font-bold">Inicio</span>
         </button>
 
-        <button className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group">
+        {/* --- NAVEGACIÓN A FAVORITOS --- */}
+        <button 
+            onClick={() => navigate('/favorites')}
+            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group"
+        >
             <Heart className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
             <span className="text-[10px] font-medium">Favs</span>
         </button>
@@ -320,7 +338,10 @@ const Home = () => {
             >
                 <div className="relative">
                     <LayoutDashboard className="h-6 w-6 mb-1 group-active:scale-90 transition-transform text-brand-900" />
-                    <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                    {/* SOLO MUESTRA ALERTA SI HAY MENSAJES PENDIENTES */}
+                    {unreadMessages > 0 && (
+                        <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                    )}
                 </div>
                 <span className="text-[10px] font-bold text-brand-900">Panel</span>
             </button>

@@ -12,6 +12,7 @@ router.register(r'pagos', PagoViewSet, basename='pago')
 router.register(r'perfil', PerfilUsuarioViewSet, basename='perfil')
 router.register(r'resenas-usuario', ResenaUsuarioViewSet)
 router.register(r'resenas', ResenaViewSet, basename='resena')
+router.register(r'favoritos', FavoritoViewSet, basename='favoritos')
 
 urlpatterns = [
     path('', include(router.urls)),
