@@ -7,6 +7,55 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
+// --- 1. CONFIGURACIÓN DE NOTIFICACIONES PUSH ---
+// Reemplaza esto con la LLAVE PÚBLICA que generaste en vapidkeys.com
+const PUBLIC_VAPID_KEY = 'BFNNtkj2cYP6XF7DhCKi637rSmn5orTcWMHiFFZCQQAdNoihC_pgr7Q0Gr2XYi6T1S5h74-AgbcvagVw1C5Qf-o'; 
+
+const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)));
+};
+
+const subscribeToPush = async (token) => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    try {
+        // Pedir permiso al usuario si no lo ha dado
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+
+        const registration = await navigator.serviceWorker.ready;
+        
+        // Generar la suscripción con Google/Apple
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+        });
+
+        // Enviar la suscripción a Django
+        await fetch(`${API_URL}/webpush/save_information/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${token}`
+            },
+            body: JSON.stringify({
+                status_type: 'subscribe',
+                subscription: subscription.toJSON(),
+                browser: navigator.userAgent,
+                endpoint: subscription.endpoint
+            })
+        });
+        console.log("📱 Suscripción Push guardada en Django!");
+    } catch (error) {
+        console.error("Error al suscribir a Push:", error);
+    }
+};
+// --------------------------------------------------------
+
+
 const Home = () => {
   const navigate = useNavigate();
   
@@ -68,6 +117,10 @@ const Home = () => {
     // Cargar Usuario y verificar Roles
     const token = localStorage.getItem('chantli_token');
     if (token) {
+        // --- 2. REGISTRAR EL DISPOSITIVO PARA NOTIFICACIONES ---
+        subscribeToPush(token);
+        // -------------------------------------------------------
+
         const headers = { 'Authorization': `Token ${token}` };
         fetch(`${API_URL}/api/me/`, { headers })
         .then(res => res.ok ? res.json() : null)
