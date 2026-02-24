@@ -35,7 +35,7 @@ const subscribeToPush = async (token) => {
         });
 
         // Enviar la suscripción a Django
-        await fetch(`${API_URL}/webpush/save_information/`, {
+        await fetch(`${API_URL}/api/webpush/save_information/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
