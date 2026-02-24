@@ -14,10 +14,13 @@ router.register(r'resenas-usuario', ResenaUsuarioViewSet)
 router.register(r'resenas', ResenaViewSet, basename='resena')
 router.register(r'favoritos', FavoritoViewSet, basename='favoritos')
 
+
+
 urlpatterns = [
     path('', include(router.urls)),
     path('me/', CurrentUserView.as_view(), name='current-user'),
     path('registro/', RegistroView.as_view(), name='registro'),
     path('google-login/', GoogleLoginView.as_view(), name='google-login'),
     path('public-profile/<int:pk>/', PublicUserProfileView.as_view()),
+    path('webpush/', include('webpush.urls')),
 ]
