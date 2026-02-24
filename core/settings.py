@@ -15,7 +15,7 @@ env = environ.Env(
 )
 
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
-
+STATIC_ROOT = '/var/www/Chantli/staticfiles/'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
