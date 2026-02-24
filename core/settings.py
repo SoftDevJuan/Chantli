@@ -71,6 +71,11 @@ CORS_ALLOW_ALL_ORIGINS = True
     "http://localhost:5173",
 ]"""
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://chantli.online",
+    "https://www.chantli.online"
+]
+
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
