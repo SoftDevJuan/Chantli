@@ -22,32 +22,41 @@ const subscribeToPush = async (token) => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
     try {
-        // Pedir permiso al usuario si no lo ha dado
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') return;
 
         const registration = await navigator.serviceWorker.ready;
         
-        // Generar la suscripción con Google/Apple
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
         });
 
-        // Enviar la suscripción a Django
-        await fetch(`${API_URL}/api/webpush/save_information`, {
+        // --- EL ARREGLO ESTÁ AQUÍ ---
+        // Extraemos las partes exactas que Django WebPush pide
+        const subData = subscription.toJSON();
+        
+        const payload = {
+            status_type: 'subscribe',
+            subscription: {
+                endpoint: subscription.endpoint,
+                keys: {
+                    p256dh: subData.keys.p256dh,
+                    auth: subData.keys.auth
+                }
+            },
+            browser: navigator.userAgent
+        };
+
+        await fetch(`${API_URL}/api/webpush/save_information/`, { // <- Le regresamos la barrita final aquí
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Token ${token}`
             },
-            body: JSON.stringify({
-                status_type: 'subscribe',
-                subscription: subscription.toJSON(),
-                browser: navigator.userAgent,
-                endpoint: subscription.endpoint
-            })
+            body: JSON.stringify(payload)
         });
+        
         console.log("📱 Suscripción Push guardada en Django!");
     } catch (error) {
         console.error("Error al suscribir a Push:", error);
