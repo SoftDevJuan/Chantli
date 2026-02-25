@@ -48,7 +48,7 @@ const subscribeToPush = async (token) => {
             browser: navigator.userAgent
         };
 
-        await fetch(`${API_URL}/api/webpush/save_information/`, { // <- Le regresamos la barrita final aquí
+        await fetch(`${API_URL}/api/webpush/save_information`, { // <- Le regresamos la barrita final aquí
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
