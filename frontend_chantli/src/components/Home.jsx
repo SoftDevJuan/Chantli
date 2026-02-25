@@ -239,6 +239,9 @@ const Home = () => {
                             <span className="absolute top-1 right-2 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
                         )}
                     </button>
+                        <button onClick={() => navigate('/historial-rentas')} className="px-3 py-1.5 bg-brand-600 text-white rounded-full text-xs font-bold shadow-md hover:bg-brand-700 transition active:scale-95">
+                            Mi Historial de Rentas
+                        </button>
 
                     <div 
                         onClick={() => navigate('/profile')} 

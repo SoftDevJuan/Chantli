@@ -16,6 +16,7 @@ import Invoices from './components/Invoices';
 import VerificationProfile from './components/VerificationProfile';
 import AdminVerifications from './components/AdminVerifications';
 import Favorites from './components/Favorites';
+import HistorialRentas from './components/HistorialRentas';
 
 
 
@@ -40,6 +41,7 @@ function App() {
         <Route path="/verification" element={<VerificationProfile />} />
         <Route path="/admin-panel" element={<AdminVerifications />} />   
         <Route path="/favorites" element={<Favorites />} />   
+        <Route path="/historial-rentas" element={<HistorialRentas />} />
       </Routes>
     </BrowserRouter>
   );
