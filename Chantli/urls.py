@@ -22,5 +22,5 @@ urlpatterns = [
     path('registro/', RegistroView.as_view(), name='registro'),
     path('google-login/', GoogleLoginView.as_view(), name='google-login'),
     path('public-profile/<int:pk>/', PublicUserProfileView.as_view()),
-    path('webpush/', include('webpush.urls')),
+    path('webpush/subscribe/', SubscribePushView.as_view(), name='webpush-subscribe'),
 ]

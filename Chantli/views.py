@@ -30,6 +30,7 @@ from django.conf import settings
 
 # --- IMPORTACIÓN DE WEB PUSH ---
 from webpush import send_user_notification
+from webpush.models import PushInformation, SubscriptionInfo
 
 
 class PropiedadViewSet(viewsets.ModelViewSet):
@@ -713,3 +714,42 @@ class FavoritoViewSet(viewsets.ModelViewSet):
         ).exists()
         
         return Response({'is_favorite': is_favorite})
+
+
+class SubscribePushView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+        sub_data = data.get('subscription', {})
+        endpoint = sub_data.get('endpoint')
+        keys = sub_data.get('keys', {})
+        p256dh = keys.get('p256dh')
+        auth = keys.get('auth')
+
+        if not endpoint or not p256dh or not auth:
+            return Response({'error': 'Datos de suscripción incompletos'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Guarda la información técnica del dispositivo/navegador
+        sub_info, created = SubscriptionInfo.objects.get_or_create(
+            endpoint=endpoint,
+            defaults={
+                'p256dh': p256dh,
+                'auth': auth,
+                'browser': data.get('browser', 'Chantli PWA')
+            }
+        )
+        
+        # Si ya existía, actualizamos las llaves por si cambiaron
+        if not created:
+            sub_info.p256dh = p256dh
+            sub_info.auth = auth
+            sub_info.save()
+
+        # ¡LA MAGIA! Conecta ese dispositivo al usuario dueño del Token
+        PushInformation.objects.get_or_create(
+            user=request.user,
+            subscription=sub_info
+        )
+
+        return Response({'status': 'Dispositivo suscrito con éxito'}, status=status.HTTP_201_CREATED)
