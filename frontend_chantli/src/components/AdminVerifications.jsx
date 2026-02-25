@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, FileText, Check, X as XIcon, User, Eye, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, FileText, Check, X as XIcon, User, Eye, AlertCircle, ExternalLink } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
