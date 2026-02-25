@@ -730,23 +730,28 @@ class SubscribePushView(APIView):
         if not endpoint or not p256dh or not auth:
             return Response({'error': 'Datos de suscripción incompletos'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Guarda la información técnica del dispositivo/navegador
+        # 1. Obtenemos el nombre del navegador. Si no viene, usamos "Chantli PWA".
+        raw_browser = data.get('browser', 'Chantli PWA')
+        
+        # 2. EL ARREGLO: Recortamos la cadena para que tenga como MÁXIMO 100 caracteres.
+        safe_browser = raw_browser[:100]
+
+        # 3. Guardamos la información
         sub_info, created = SubscriptionInfo.objects.get_or_create(
             endpoint=endpoint,
             defaults={
                 'p256dh': p256dh,
                 'auth': auth,
-                'browser': data.get('browser', 'Chantli PWA')
+                'browser': safe_browser # Usamos la versión recortada
             }
         )
         
-        # Si ya existía, actualizamos las llaves por si cambiaron
         if not created:
             sub_info.p256dh = p256dh
             sub_info.auth = auth
+            sub_info.browser = safe_browser # Actualizamos también aquí por si acaso
             sub_info.save()
 
-        # ¡LA MAGIA! Conecta ese dispositivo al usuario dueño del Token
         PushInformation.objects.get_or_create(
             user=request.user,
             subscription=sub_info
