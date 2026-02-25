@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, ShieldAlert, FileText, Check, X as XIcon, User, ExternalLink, Loader2, Eye } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, FileText, Check, X as XIcon, User, Eye, AlertCircle } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -9,8 +9,8 @@ const AdminVerifications = () => {
   const [perfiles, setPerfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Estado para el modal de visualización de documentos
-  const [visorDoc, setVisorDoc] = useState(null); // URL de la imagen a ver en grande
+  // Estado para el modal del Súper Visor
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // Cargar lista
   const fetchPendientes = async () => {
@@ -27,7 +27,16 @@ const AdminVerifications = () => {
         }
 
         const data = await res.json();
-        setPerfiles(data);
+        
+        // 1. EL FILTRO MÁGICO: Solo mostramos a quienes ya subieron al menos un documento o foto
+        const usuariosConDocs = data.filter(p => 
+            p.identificacion_frente || 
+            p.foto_selfie || 
+            p.constancia_estudios_trabajo || 
+            p.comprobante_domicilio_propiedad
+        );
+
+        setPerfiles(usuariosConDocs);
         setLoading(false);
     } catch (error) {
         console.error(error);
@@ -53,7 +62,7 @@ const AdminVerifications = () => {
           });
 
           if (res.ok) {
-              // Actualizar UI localmente para que sea rápido
+              // Actualizar UI localmente (Lista)
               setPerfiles(prev => prev.map(p => {
                   if (p.id === idPerfil) {
                       return {
@@ -64,201 +73,255 @@ const AdminVerifications = () => {
                   }
                   return p;
               }));
+              
+              // Actualizar UI localmente (Modal si está abierto)
+              if (selectedUser && selectedUser.id === idPerfil) {
+                  setSelectedUser(prev => ({
+                      ...prev,
+                      es_anfitrion_verificado: tipo === 'anfitrion' ? nuevoValor : prev.es_anfitrion_verificado,
+                      es_huesped_verificado: tipo === 'huesped' ? nuevoValor : prev.es_huesped_verificado
+                  }));
+              }
           }
       } catch (error) {
           alert("Error al actualizar");
       }
   };
 
-  if (loading) return <div className="p-10 text-center">Cargando panel...</div>;
+  // Ayudante para formatear URLs de archivos
+  const getFileUrl = (path) => {
+      if (!path) return null;
+      return path.startsWith('http') ? path : `${API_URL}${path}`;
+  };
+
+  if (loading) return <div className="p-10 text-center font-bold text-gray-500">Cargando panel de seguridad...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 p-6 pb-20">
       
-      {/* Header */}
-      <div className="max-w-7xl mx-auto mb-6 flex items-center justify-between">
+      {/* --- HEADER --- */}
+      <div className="max-w-5xl mx-auto mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/home')} className="bg-white p-2 rounded-full shadow hover:bg-gray-50">
+            <button onClick={() => navigate('/home')} className="bg-white p-2 rounded-full shadow hover:bg-gray-50 transition-colors">
                 <ArrowLeft className="h-5 w-5 text-gray-700" />
             </button>
             <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                 <ShieldCheck className="h-8 w-8 text-brand-600" /> 
-                Panel de Validación
+                Centro de Validación
             </h1>
         </div>
-        <span className="bg-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm text-gray-500">
-            {perfiles.length} Usuarios Encontrados
+        <span className="bg-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm text-gray-500 border border-gray-200">
+            {perfiles.length} Solicitudes Pendientes
         </span>
       </div>
 
-      {/* Grid de Usuarios */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 gap-6">
-        {perfiles.map(perfil => (
-            <div key={perfil.id} className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200">
-                
-                {/* Cabecera del Usuario */}
-                <div className="bg-gray-50 p-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-xl overflow-hidden shadow-inner">
+      {/* --- LISTA LIMPIA DE USUARIOS --- */}
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+        {perfiles.length === 0 ? (
+            <div className="col-span-full bg-white p-10 rounded-2xl shadow-sm text-center border border-dashed border-gray-300">
+                <ShieldCheck className="h-12 w-12 mx-auto text-gray-300 mb-2" />
+                <p className="text-gray-500 font-medium">No hay usuarios con documentos pendientes de validación.</p>
+            </div>
+        ) : (
+            perfiles.map(perfil => (
+                <div key={perfil.id} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 flex flex-col">
+                    <div className="p-5 flex items-center gap-4">
+                        <div className="h-14 w-14 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-xl overflow-hidden shadow-inner flex-shrink-0">
                             {perfil.foto_perfil ? (
-                                <img src={perfil.foto_perfil} alt="Foto" className="w-full h-full object-cover" />
+                                <img src={getFileUrl(perfil.foto_perfil)} alt="Foto" className="w-full h-full object-cover" />
                             ) : (
-                                <User />
+                                <User className="h-6 w-6" />
                             )}
                         </div>
-                        <div>
-                            <h2 className="font-bold text-lg text-gray-900">@{perfil.username}</h2>
-                            <p className="text-sm text-gray-500">{perfil.email}</p>
-                            <p className="text-xs text-gray-400 font-mono mt-1">Tel: {perfil.telefono || 'Sin registro'}</p>
+                        <div className="flex-1 min-w-0">
+                            <h2 className="font-bold text-lg text-gray-900 truncate">@{perfil.username}</h2>
+                            <p className="text-xs text-gray-500 truncate">{perfil.email}</p>
+                            
+                            {/* Insignias rápidas de estado */}
+                            <div className="flex gap-2 mt-2">
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${perfil.es_anfitrion_verificado ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                    Anfitrión {perfil.es_anfitrion_verificado ? '✓' : '⌛'}
+                                </span>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${perfil.es_huesped_verificado ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                                    Huésped {perfil.es_huesped_verificado ? '✓' : '⌛'}
+                                </span>
+                            </div>
                         </div>
                     </div>
                     
-                    {/* Botones de Acción Principal */}
-                    <div className="flex gap-3">
-                        {/* Control Anfitrión */}
+                    {/* Botón para abrir el Súper Modal */}
+                    <div className="bg-gray-50 p-3 border-t border-gray-100">
                         <button 
-                            onClick={() => toggleVerificacion(perfil.id, 'anfitrion', !perfil.es_anfitrion_verificado)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs transition-all border shadow-sm
-                            ${perfil.es_anfitrion_verificado 
-                                ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' 
-                                : 'bg-white text-gray-400 border-gray-300 hover:border-green-500 hover:text-green-600'}`}
+                            onClick={() => setSelectedUser(perfil)}
+                            className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-800 font-bold py-2 rounded-lg shadow-sm hover:bg-brand-50 hover:border-brand-300 hover:text-brand-700 transition-all"
                         >
-                            {perfil.es_anfitrion_verificado ? <Check className="h-4 w-4" /> : <div className="h-4 w-4 border-2 border-current rounded-sm"></div>}
-                            ANFITRIÓN
-                        </button>
-
-                        {/* Control Huésped */}
-                        <button 
-                            onClick={() => toggleVerificacion(perfil.id, 'huesped', !perfil.es_huesped_verificado)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs transition-all border shadow-sm
-                            ${perfil.es_huesped_verificado 
-                                ? 'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200' 
-                                : 'bg-white text-gray-400 border-gray-300 hover:border-blue-500 hover:text-blue-600'}`}
-                        >
-                            {perfil.es_huesped_verificado ? <Check className="h-4 w-4" /> : <div className="h-4 w-4 border-2 border-current rounded-sm"></div>}
-                            HUÉSPED
+                            <Eye className="h-4 w-4" /> Ver Documentación
                         </button>
                     </div>
                 </div>
-
-                {/* Cuerpo: Documentos (Ajustado a 5 columnas para incluir la Selfie) */}
-                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    
-                    {/* 1. INE Frente */}
-                    <DocumentCard 
-                        title="INE Frente" 
-                        file={perfil.identificacion_frente} 
-                        onView={() => setVisorDoc(perfil.identificacion_frente)} 
-                    />
-
-                    {/* 2. INE Reverso */}
-                    <DocumentCard 
-                        title="INE Reverso" 
-                        file={perfil.identificacion_reverso} 
-                        onView={() => setVisorDoc(perfil.identificacion_reverso)} 
-                    />
-
-                    {/* 3. NUEVO: Selfie / Prueba de Vida */}
-                    <DocumentCard 
-                        title="Selfie (Prueba de Vida)" 
-                        file={perfil.foto_selfie} 
-                        onView={() => setVisorDoc(perfil.foto_selfie)} 
-                    />
-
-                    {/* 4. Datos Fiscales / Domicilio */}
-                    <div className="space-y-4">
-                        <DocumentCard 
-                            title="Comp. Domicilio" 
-                            file={perfil.comprobante_domicilio_propiedad} 
-                            onView={() => setVisorDoc(perfil.comprobante_domicilio_propiedad)} 
-                        />
-                         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase">RFC / SAT</p>
-                            <p className="font-mono text-sm font-bold text-gray-700 break-all">
-                                {perfil.rfc || "No registrado"}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* 5. Datos Huésped */}
-                    <div className="space-y-4">
-                        <DocumentCard 
-                            title="Constancia Estudios/Trabajo" 
-                            file={perfil.constancia_estudios_trabajo} 
-                            onView={() => setVisorDoc(perfil.constancia_estudios_trabajo)} 
-                        />
-                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase">Referencia</p>
-                            <p className="text-xs font-bold text-gray-700 truncate">{perfil.referencia_nombre || "Sin nombre"}</p>
-                            <p className="text-xs text-gray-500 font-mono">{perfil.referencia_telefono || "Sin teléfono"}</p>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        ))}
+            ))
+        )}
       </div>
 
-      {/* MODAL VISOR DE IMAGEN */}
-      {visorDoc && (
-          <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setVisorDoc(null)}>
-              <button className="absolute top-4 right-4 text-white hover:text-red-400 transition-colors">
-                  <XIcon className="h-8 w-8" />
-              </button>
-              <img 
-                src={visorDoc.startsWith('http') ? visorDoc : `${API_URL}${visorDoc}`} 
-                className="max-w-full max-h-[90vh] rounded-lg shadow-2xl" 
-                alt="Documento" 
-                onClick={(e) => e.stopPropagation()} // Evitar cerrar al dar click a la imagen
-              />
-          </div>
+      {/* --- SÚPER MODAL DE VALIDACIÓN VISUAL --- */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm">
+            <div className="bg-gray-100 rounded-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden shadow-2xl animate-fade-in">
+                
+                {/* Cabecera del Modal */}
+                <div className="bg-white p-4 border-b flex justify-between items-center shadow-sm z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-brand-100 rounded-full flex items-center justify-center overflow-hidden">
+                            {selectedUser.foto_perfil ? <img src={getFileUrl(selectedUser.foto_perfil)} className="w-full h-full object-cover"/> : <User className="text-brand-600" />}
+                        </div>
+                        <div>
+                            <h2 className="font-bold text-lg text-gray-800">Validando a @{selectedUser.username}</h2>
+                            <p className="text-xs text-gray-500 font-mono">RFC: {selectedUser.rfc || 'No subido'} | Tel: {selectedUser.telefono || 'No subido'}</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setSelectedUser(null)} className="p-2 bg-gray-100 rounded-full hover:bg-red-100 hover:text-red-600 transition-colors">
+                        <XIcon className="h-6 w-6" />
+                    </button>
+                </div>
+
+                {/* Cuerpo Scrolleable del Modal */}
+                <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6">
+                    
+                    {/* SECCIÓN 1: BIOMETRÍA (INE vs Selfie) */}
+                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 className="text-sm font-bold text-gray-800 uppercase mb-4 flex items-center gap-2">
+                            <ShieldCheck className="h-5 w-5 text-brand-600" /> Comparación Biométrica
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Izquierda: Identificaciones (Toman 2 columnas) */}
+                            <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <ImagePreviewBox title="INE (Frente)" src={getFileUrl(selectedUser.identificacion_frente)} />
+                                <ImagePreviewBox title="INE (Reverso)" src={getFileUrl(selectedUser.identificacion_reverso)} />
+                            </div>
+                            
+                            {/* Derecha: Selfie (Toma 1 columna, se muestra más grande) */}
+                            <div className="col-span-1 border-l-0 lg:border-l-2 border-dashed border-gray-200 lg:pl-6">
+                                <ImagePreviewBox title="Prueba de Vida (Selfie)" src={getFileUrl(selectedUser.foto_selfie)} isSelfie={true} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* SECCIÓN 2: DOCUMENTOS PDF (Comprobante y Constancia) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        {/* Comprobante de Domicilio (Para Anfitrión) */}
+                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                            <h3 className="text-sm font-bold text-gray-800 uppercase mb-4">Comprobante Domicilio (Anfitrión)</h3>
+                            <DocumentViewer src={getFileUrl(selectedUser.comprobante_domicilio_propiedad)} />
+                        </div>
+
+                        {/* Constancia de Estudios (Para Huésped) */}
+                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-sm font-bold text-gray-800 uppercase">Constancia Estudios (Huésped)</h3>
+                            </div>
+                            <div className="mb-3 bg-gray-50 p-2 rounded text-xs border border-gray-200 flex justify-between">
+                                <span><strong className="text-gray-500">Ref:</strong> {selectedUser.referencia_nombre || 'N/A'}</span>
+                                <span className="font-mono"><strong className="text-gray-500">Tel:</strong> {selectedUser.referencia_telefono || 'N/A'}</span>
+                            </div>
+                            <DocumentViewer src={getFileUrl(selectedUser.constancia_estudios_trabajo)} />
+                        </div>
+                    </div>
+
+                </div>
+
+                {/* Footer de Decisiones (Sticky abajo) */}
+                <div className="bg-white p-4 border-t flex flex-col sm:flex-row justify-end gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                    <button 
+                        onClick={() => toggleVerificacion(selectedUser.id, 'huesped', !selectedUser.es_huesped_verificado)}
+                        className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all border-2
+                        ${selectedUser.es_huesped_verificado 
+                            ? 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200' 
+                            : 'bg-white text-gray-500 border-gray-300 hover:border-blue-500 hover:text-blue-600'}`}
+                    >
+                        {selectedUser.es_huesped_verificado ? <Check className="h-5 w-5" /> : <div className="h-5 w-5 border-2 border-current rounded-md"></div>}
+                        APROBAR HUÉSPED
+                    </button>
+
+                    <button 
+                        onClick={() => toggleVerificacion(selectedUser.id, 'anfitrion', !selectedUser.es_anfitrion_verificado)}
+                        className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all border-2
+                        ${selectedUser.es_anfitrion_verificado 
+                            ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' 
+                            : 'bg-white text-gray-500 border-gray-300 hover:border-green-500 hover:text-green-600'}`}
+                    >
+                        {selectedUser.es_anfitrion_verificado ? <Check className="h-5 w-5" /> : <div className="h-5 w-5 border-2 border-current rounded-md"></div>}
+                        APROBAR ANFITRIÓN
+                    </button>
+                </div>
+
+            </div>
+        </div>
       )}
 
     </div>
   );
 };
 
-// Componente auxiliar para tarjeta de documento
-const DocumentCard = ({ title, file, onView }) => {
-    if (!file) return (
-        <div className="border border-dashed border-gray-200 bg-gray-50 rounded-lg h-32 flex flex-col items-center justify-center text-gray-300">
-            <FileText className="h-6 w-6 mb-1" />
-            <span className="text-xs">Sin documento</span>
+// --- COMPONENTES AUXILIARES PARA EL MODAL ---
+
+// Visor de Imágenes (Para INE y Selfie)
+const ImagePreviewBox = ({ title, src, isSelfie }) => {
+    return (
+        <div className="flex flex-col h-full">
+            <span className="text-xs font-bold text-gray-500 mb-2">{title}</span>
+            <div className={`bg-gray-100 rounded-xl border border-gray-200 overflow-hidden flex-1 flex items-center justify-center relative group
+                ${isSelfie ? 'min-h-[250px]' : 'min-h-[160px]'}`}
+            >
+                {src ? (
+                    <>
+                        <img src={src} className="w-full h-full object-contain absolute inset-0 p-1" alt={title} />
+                        {/* Botón para ver en pestaña nueva por si quieren zoom */}
+                        <a href={src} target="_blank" rel="noreferrer" className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black">
+                            <ExternalLink className="h-4 w-4" />
+                        </a>
+                    </>
+                ) : (
+                    <div className="text-gray-400 flex flex-col items-center">
+                        <AlertCircle className="h-8 w-8 mb-1 opacity-50" />
+                        <span className="text-xs font-medium">No subido</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// Visor de Documentos (Incrusta PDFs en iframes o muestra imagen si no es PDF)
+const DocumentViewer = ({ src }) => {
+    if (!src) return (
+        <div className="h-80 bg-gray-50 border border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400">
+            <AlertCircle className="h-10 w-10 mb-2 opacity-50" />
+            <span className="text-sm font-medium">Archivo no proporcionado</span>
         </div>
     );
 
-    const isPdf = typeof file === 'string' && file.toLowerCase().endsWith('.pdf');
+    const isPdf = src.toLowerCase().endsWith('.pdf');
 
     return (
-        <div className="border border-gray-200 rounded-lg overflow-hidden group relative h-32 bg-gray-100 shadow-sm">
+        <div className="h-80 bg-gray-100 border border-gray-200 rounded-xl overflow-hidden relative group">
             {isPdf ? (
-                <div className="w-full h-full flex items-center justify-center bg-red-50 text-red-500">
-                    <FileText className="h-10 w-10" />
-                    <span className="text-xs font-bold ml-2">PDF</span>
-                </div>
+                // El iframe renderiza el PDF directamente en la página
+                <iframe src={src} className="w-full h-full border-none" title="Visor PDF" />
             ) : (
-                <img 
-                    src={file.startsWith('http') ? file : `${API_URL}${file}`} 
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105" 
-                    alt={title} 
-                />
+                <img src={src} className="w-full h-full object-contain p-2" alt="Documento" />
             )}
             
-            {/* Overlay */}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                <span className="text-white text-xs font-bold text-center px-2">{title}</span>
-                <button 
-                    onClick={(e) => { e.stopPropagation(); isPdf ? window.open(file, '_blank') : onView(); }}
-                    className="bg-white text-black p-2 rounded-full hover:bg-brand-50 shadow-lg transform active:scale-95 transition-all"
-                >
-                    {isPdf ? <ExternalLink className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-            </div>
-
-            {/* Etiqueta siempre visible si no hay hover */}
-            <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm text-white text-[10px] p-1.5 text-center truncate group-hover:opacity-0 transition-opacity">
-                {title}
-            </div>
+            {/* Botón flotante para abrir en pantalla completa si está muy pequeño */}
+            <a 
+                href={src} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="absolute bottom-4 right-4 bg-brand-600 text-white px-4 py-2 rounded-full font-bold text-xs shadow-lg hover:bg-brand-700 transition-transform hover:scale-105 flex items-center gap-2 opacity-0 group-hover:opacity-100"
+            >
+                <ExternalLink className="h-4 w-4" /> Abrir completo
+            </a>
         </div>
     );
 };
