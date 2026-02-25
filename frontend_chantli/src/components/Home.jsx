@@ -75,6 +75,7 @@ const Home = () => {
   const [propiedades, setPropiedades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [userPhoto, setUserPhoto] = useState(null); // ESTADO DE LA FOTO
   
   // NUEVO ESTADO PARA NOTIFICACIONES GENERALES
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
@@ -138,6 +139,11 @@ const Home = () => {
                 const rol = userData.rol || userData.perfil?.rol;
                 if (rol === 'anfitrion') setIsHost(true);
                 if (userData.is_staff || userData.is_superuser) setIsAdmin(true);
+                
+                // AQUÍ GUARDAMOS LA FOTO DEL PERFIL
+                if (userData.perfil?.foto_perfil) {
+                    setUserPhoto(userData.perfil.foto_perfil);
+                }
             }
         })
         .catch(console.error);
@@ -147,11 +153,6 @@ const Home = () => {
             .then(data => setUnreadMessages(data.count))
             .catch(console.error);
             
-        // EJEMPLO: Verificar si hay notificaciones generales (Ajusta el endpoint si tienes uno)
-        // fetch(`${API_URL}/api/notificaciones/unread/`, { headers })
-        //    .then(r => r.ok ? r.json() : { has_unread: false })
-        //    .then(data => setHasUnreadNotifications(data.has_unread))
-        //    .catch(console.error);
     } else {
         setIsHost(false);
         setIsAdmin(false);
@@ -159,8 +160,6 @@ const Home = () => {
   }, [navigate]);
 
   // --- MANEJADORES DE BÚSQUEDA ---
-
-  // 1. Ejecutar búsqueda manual (Input)
   const handleSearch = () => {
       setActiveFilter('Custom'); // Desactivar chips visualmente
       fetchProperties(`?search=${searchText}`);
@@ -172,21 +171,18 @@ const Home = () => {
       }
   };
 
-  // 2. Ejecutar filtros rápidos (Botones)
   const applyQuickFilter = (filtro) => {
       setActiveFilter(filtro);
-      setSearchText(''); // Limpiar barra de búsqueda al usar chip
+      setSearchText(''); 
 
       switch (filtro) {
           case 'Todos':
               fetchProperties();
               break;
           case 'Económicos':
-              // Ordenar por precio ascendente
               fetchProperties('?ordering=precio'); 
               break;
           case 'Cerca de CUCEI':
-              // Buscar coincidencias de texto
               fetchProperties('?search=CUCEI');
               break;
           case 'Amueblados':
@@ -196,7 +192,7 @@ const Home = () => {
               fetchProperties('?search=Mujeres');
               break;
           case 'Pet Friendly':
-              fetchProperties('?search=Mascotas'); // O 'Pet Friendly' según cómo lo guardes
+              fetchProperties('?search=Mascotas'); 
               break;
           default:
               fetchProperties();
@@ -229,25 +225,33 @@ const Home = () => {
                         </button>
                     )}
 
+                    <button onClick={() => navigate('/historial-rentas')} className="px-3 py-1.5 bg-brand-600 text-white rounded-full text-xs font-bold shadow-md hover:bg-brand-700 transition active:scale-95">
+                            Mi Historial de Rentas
+                    </button>
+
                     <button 
                         onClick={() => navigate('/notifications')}
                         className="p-2 bg-white rounded-full border border-gray-100 shadow-sm relative active:scale-95 transition-transform hover:bg-gray-50"
                     >
                         <Bell className="h-5 w-5 text-gray-600" />
-                        {/* SOLO MUESTRA EL PUNTO SI HAY NOTIFICACIONES */}
                         {hasUnreadNotifications && (
                             <span className="absolute top-1 right-2 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
                         )}
                     </button>
-                        <button onClick={() => navigate('/historial-rentas')} className="px-3 py-1.5 bg-brand-600 text-white rounded-full text-xs font-bold shadow-md hover:bg-brand-700 transition active:scale-95">
-                            Mi Historial de Rentas
-                        </button>
-
+                    
                     <div 
                         onClick={() => navigate('/profile')} 
-                        className="h-9 w-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border border-brand-200 cursor-pointer hover:bg-brand-200 transition"
+                        className="h-9 w-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border border-brand-200 cursor-pointer hover:bg-brand-200 transition overflow-hidden shadow-sm"
                     >
-                        U
+                        {userPhoto ? (
+                            <img 
+                                src={userPhoto.startsWith('http') ? userPhoto : `${API_URL}${userPhoto}`} 
+                                alt="Perfil" 
+                                className="h-full w-full object-cover" 
+                            />
+                        ) : (
+                            "U"
+                        )}
                     </div>
                 </div>
             </div>

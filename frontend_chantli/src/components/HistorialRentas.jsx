@@ -197,7 +197,7 @@ const HistorialRentas = () => {
     return (
         <div className="min-h-screen bg-gray-50 pb-24">
             <div className="bg-white sticky top-0 z-30 px-4 py-4 shadow-sm flex items-center gap-4">
-                <button onClick={() => navigate('/profile')} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition">
+                <button onClick={() => navigate('/home')} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition">
                     <ArrowLeft className="h-5 w-5 text-gray-700" />
                 </button>
                 <h1 className="text-xl font-bold text-gray-900">Mi Historial de Rentas</h1>
