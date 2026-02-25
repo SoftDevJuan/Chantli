@@ -1,17 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Lock, Home } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL;
-// 1. Importar librería de Google
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Login = () => {
+  // --- ESTADOS ---
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // 1. NUEVO: Estado para verificar la sesión antes de mostrar nada
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  
   const navigate = useNavigate();
+
+  // --- EL GUARDIA DE SESIÓN (UX MEJORADA) ---
+  useEffect(() => {
+    const token = localStorage.getItem('chantli_token');
+    if (token) {
+      // Si hay token, lo mandamos a Home y NUNCA mostramos el formulario
+      navigate('/home', { replace: true }); 
+    } else {
+      // Si NO hay token, apagamos la pantalla de carga para que pueda iniciar sesión
+      setIsCheckingSession(false);
+    }
+  }, [navigate]);
 
   // --- LOGIN NORMAL ---
   const handleLogin = async (e) => {
@@ -29,7 +45,7 @@ const Login = () => {
       
       if (response.ok) {
         localStorage.setItem('chantli_token', data.token);
-        navigate('/home');
+        navigate('/home', { replace: true });
       } else {
         setError('Usuario o contraseña incorrectos');
       }
@@ -43,21 +59,18 @@ const Login = () => {
   // --- LOGIN CON GOOGLE ---
   const handleGoogleLogin = async (credentialResponse) => {
     try {
-        // Usamos el mismo endpoint que en el registro
         const res = await fetch(`${API_URL}/api/google-login/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 token: credentialResponse.credential,
-                // No enviamos 'rol' aquí, porque asumimos que el usuario ya existe.
-                // Si es nuevo y entra por aquí, el backend le pondrá 'huesped' por defecto.
             })
         });
         const data = await res.json();
         
         if (res.ok) {
             localStorage.setItem('chantli_token', data.token);
-            navigate('/home');
+            navigate('/home', { replace: true });
         } else {
             setError('No pudimos iniciar sesión con Google');
         }
@@ -66,20 +79,21 @@ const Login = () => {
     }
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem('chantli_token');
-    if (token) {
-      // Si ya hay un token, lo mandamos a Home inmediatamente.
-      // Usamos replace: true para que no pueda regresar al login usando el botón de "Atrás" del celular
-      navigate('/home', { replace: true }); 
-    }
-  }, [navigate]);
-
+  // 2. NUEVO: Pantalla de carga (Splash Screen) mientras verifica el token
+  if (isCheckingSession) {
+      return (
+          <div className="min-h-screen bg-brand-50 flex flex-col items-center justify-center">
+              {/* Logo con animación de pulso como una app nativa */}
+              <div className="animate-pulse h-20 w-20 bg-brand-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
+                  <Home className="text-gray-800 h-10 w-10" />
+              </div>
+          </div>
+      );
+  }
 
   return (
-    // 2. Envolver todo en el Provider con TU ID
     <GoogleOAuthProvider clientId="485296325778-9i5j0efprjtgil4v66cr1p46rg18sjne.apps.googleusercontent.com">
-        <div className="min-h-screen bg-brand-50 flex flex-col justify-center px-6 py-12 lg:px-8">
+        <div className="min-h-screen bg-brand-50 flex flex-col justify-center px-6 py-12 lg:px-8 animate-fade-in">
         
         {/* --- LOGO Y TÍTULO --- */}
         <div className="sm:mx-auto sm:w-full sm:max-w-sm text-center mb-10">
@@ -167,10 +181,10 @@ const Login = () => {
                     <GoogleLogin
                         onSuccess={handleGoogleLogin}
                         onError={() => setError('Falló el inicio de sesión con Google')}
-                        useOneTap={false} // Puedes poner true si quieres que salga el popup automático arriba a la derecha
+                        useOneTap={false}
                         shape="pill"
                         width="250"
-                        use_fedcm_for_prompt={false} // Ajusta el ancho si lo ves muy chico
+                        use_fedcm_for_prompt={false}
                     />
                 </div>
 
