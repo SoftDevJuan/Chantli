@@ -14,6 +14,7 @@ class PerfilUsuario(models.Model):
     telefono = models.CharField(max_length=15, blank=True)
     biografia = models.TextField(blank=True, help_text="Descripción para generar confianza")
     foto_perfil = models.ImageField(upload_to='perfiles/', null=True, blank=True)
+    foto_selfie = models.ImageField(upload_to='verificaciones/selfies/', null=True, blank=True)
 
     # --- NUEVOS CAMPOS DE VERIFICACIÓN (FUSIÓN) ---
     direccion = models.TextField(blank=True, help_text="Dirección completa con CP")

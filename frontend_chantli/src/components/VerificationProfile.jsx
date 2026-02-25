@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, ShieldCheck, FileText, AlertTriangle, CheckCircle, User, Briefcase, Home } from 'lucide-react';
+import { Upload, ShieldCheck, FileText, AlertTriangle, CheckCircle, User, Briefcase, Home, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -53,12 +53,12 @@ const VerificationProfile = () => {
       const file = e.target.files[0];
       
       if (file) {
-          // VALIDACIÓN DE TAMAÑO (Máximo 5MB para ir seguros)
-          const maxSize = 5 * 1024 * 1024; // 5 MB en bytes
+          // VALIDACIÓN DE TAMAÑO (Máximo 5MB)
+          const maxSize = 5 * 1024 * 1024; 
           
           if (file.size > maxSize) {
-              alert(`El archivo "${file.name}" es demasiado pesado. El límite es 5MB.\n\nTip: Intenta tomar una captura de pantalla de la foto o enviártela por WhatsApp para bajarle el peso.`);
-              e.target.value = ""; // Limpiar el input
+              alert(`El archivo "${file.name}" es demasiado pesado. El límite es 5MB.`);
+              e.target.value = ""; 
               return;
           }
 
@@ -73,10 +73,8 @@ const VerificationProfile = () => {
       setUploading(true);
       const token = localStorage.getItem('chantli_token');
       
-      // FormData es necesario para enviar archivos
       const data = new FormData();
       Object.keys(formData).forEach(key => data.append(key, formData[key]));
-      // Añadir booleano correctamente
       data.append('acepto_terminos_y_reglamento', 'true');
 
       Object.keys(files).forEach(key => {
@@ -86,13 +84,13 @@ const VerificationProfile = () => {
       try {
           const res = await fetch(`${API_URL}/api/perfil/subir_documentos/`, {
               method: 'PATCH',
-              headers: { 'Authorization': `Token ${token}` }, // NO poner Content-Type con FormData
+              headers: { 'Authorization': `Token ${token}` },
               body: data
           });
           
           if (res.ok) {
               alert("Documentos enviados. Nuestro equipo validará tu identidad en 24-48hrs.");
-              cargarPerfil(); // Recargar para ver cambios
+              cargarPerfil(); 
           } else {
               alert("Error al subir documentos. Verifica el tamaño de los archivos.");
           }
@@ -106,7 +104,7 @@ const VerificationProfile = () => {
   if (loading) return <div className="p-10 text-center">Cargando perfil...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
+    <div className="min-h-screen bg-gray-50 py-10 px-4 pb-28">
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
         
         {/* Encabezado */}
@@ -118,10 +116,10 @@ const VerificationProfile = () => {
 
         <form onSubmit={handleSubmit} className="p-8 space-y-8">
             
-            {/* 1. Datos Personales */}
+            {/* 1. Datos Personales y Biometría */}
             <section>
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4 border-b pb-2">
-                    <User className="h-5 w-5 text-brand-600" /> Datos Personales
+                    <User className="h-5 w-5 text-brand-600" /> Datos y Biometría
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input 
@@ -134,19 +132,36 @@ const VerificationProfile = () => {
                     />
                 </div>
                 
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center">
-                        <p className="text-sm font-bold text-gray-500 mb-2">Identificación (Frente)</p>
-                        <input type="file" name="identificacion_frente" onChange={handleFileChange} className="text-xs" accept="image/*" />
+                {/* ZONA DE FOTOS DE IDENTIFICACIÓN (Cámara Trasera) */}
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-5 text-center hover:bg-gray-50 transition">
+                        <Camera className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                        <p className="text-sm font-bold text-gray-700 mb-1">Identificación (Frente)</p>
+                        <p className="text-[10px] text-gray-500 mb-3">Toma una foto clara y sin reflejos</p>
+                        {/* capture="environment" abre la cámara trasera */}
+                        <input type="file" name="identificacion_frente" onChange={handleFileChange} className="text-xs w-full" accept="image/*" capture="environment" />
                     </div>
-                    <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center">
-                        <p className="text-sm font-bold text-gray-500 mb-2">Identificación (Reverso)</p>
-                        <input type="file" name="identificacion_reverso" onChange={handleFileChange} className="text-xs" accept="image/*" />
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-5 text-center hover:bg-gray-50 transition">
+                        <Camera className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                        <p className="text-sm font-bold text-gray-700 mb-1">Identificación (Reverso)</p>
+                        <p className="text-[10px] text-gray-500 mb-3">Asegúrate de que el texto sea legible</p>
+                        <input type="file" name="identificacion_reverso" onChange={handleFileChange} className="text-xs w-full" accept="image/*" capture="environment" />
                     </div>
+                </div>
+
+                {/* ZONA DE SELFIE (Cámara Frontal) */}
+                <div className="mt-4 border-2 border-dashed border-brand-200 bg-brand-50 rounded-xl p-5 text-center">
+                    <div className="h-12 w-12 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <User className="h-6 w-6 text-brand-600" />
+                    </div>
+                    <p className="text-sm font-bold text-brand-900 mb-1">Prueba de Vida (Selfie)</p>
+                    <p className="text-xs text-brand-700 mb-4 max-w-md mx-auto">Tómate una foto ahora mismo. Necesitamos confirmar que tu rostro coincide con la identificación proporcionada.</p>
+                    {/* capture="user" abre la cámara frontal (selfie) */}
+                    <input type="file" name="foto_selfie" onChange={handleFileChange} className="text-xs w-full max-w-xs mx-auto block" accept="image/*" capture="user" />
                 </div>
             </section>
 
-            {/* 2. Sección Anfitrión (Opcional si solo es huésped, pero visible para incitar) */}
+            {/* 2. Sección Anfitrión */}
             <section className="bg-blue-50 p-5 rounded-xl border border-blue-100">
                 <h3 className="text-lg font-bold text-blue-900 flex items-center gap-2 mb-4">
                     <Home className="h-5 w-5" /> Quiero Publicar Propiedades (Anfitrión)
@@ -163,10 +178,10 @@ const VerificationProfile = () => {
                         <input type="file" name="comprobante_domicilio_propiedad" onChange={handleFileChange} className="text-xs" accept=".pdf,image/*" />
                     </div>
                 </div>
-                {perfil.es_anfitrion_verificado ? (
-                    <div className="mt-2 text-green-600 font-bold flex items-center gap-2"><CheckCircle className="h-4 w-4"/> Anfitrión Verificado</div>
+                {perfil?.es_anfitrion_verificado ? (
+                    <div className="mt-4 text-green-600 font-bold flex items-center gap-2 bg-green-50 p-2 rounded-lg"><CheckCircle className="h-5 w-5"/> Anfitrión Verificado</div>
                 ) : (
-                    <div className="mt-2 text-orange-500 text-xs font-bold flex items-center gap-2"><AlertTriangle className="h-4 w-4"/> Pendiente de validación</div>
+                    <div className="mt-4 text-orange-600 text-sm font-bold flex items-center gap-2 bg-orange-50 p-2 rounded-lg"><AlertTriangle className="h-5 w-5"/> Pendiente de validación</div>
                 )}
             </section>
 
@@ -200,8 +215,8 @@ const VerificationProfile = () => {
                     <p className="mb-2">La información aquí proporcionada será tratada con estricta confidencialidad según la Ley de Protección de Datos...</p>
                     <h4 className="font-bold mb-2">2. Obligaciones del Huésped</h4>
                     <p className="mb-2">El huésped se compromete a cuidar el inmueble, respetar a los vecinos y no realizar actividades ilícitas...</p>
-                    <h4 className="font-bold mb-2">3. Veracidad</h4>
-                    <p>Declaro que los documentos subidos son auténticos y vigentes.</p>
+                    <h4 className="font-bold mb-2">3. Veracidad y Biometría</h4>
+                    <p>Declaro que los documentos y fotografías capturadas son auténticos, vigentes y corresponden a mi persona.</p>
                 </div>
                 
                 <label className="flex items-center gap-3 cursor-pointer">

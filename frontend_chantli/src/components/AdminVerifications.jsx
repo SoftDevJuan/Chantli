@@ -76,7 +76,7 @@ const AdminVerifications = () => {
     <div className="min-h-screen bg-gray-100 p-6">
       
       {/* Header */}
-      <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
             <button onClick={() => navigate('/home')} className="bg-white p-2 rounded-full shadow hover:bg-gray-50">
                 <ArrowLeft className="h-5 w-5 text-gray-700" />
@@ -92,14 +92,14 @@ const AdminVerifications = () => {
       </div>
 
       {/* Grid de Usuarios */}
-      <div className="max-w-6xl mx-auto grid grid-cols-1 gap-6">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 gap-6">
         {perfiles.map(perfil => (
             <div key={perfil.id} className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200">
                 
                 {/* Cabecera del Usuario */}
                 <div className="bg-gray-50 p-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-xl overflow-hidden">
+                        <div className="h-12 w-12 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-xl overflow-hidden shadow-inner">
                             {perfil.foto_perfil ? (
                                 <img src={perfil.foto_perfil} alt="Foto" className="w-full h-full object-cover" />
                             ) : (
@@ -118,7 +118,7 @@ const AdminVerifications = () => {
                         {/* Control Anfitrión */}
                         <button 
                             onClick={() => toggleVerificacion(perfil.id, 'anfitrion', !perfil.es_anfitrion_verificado)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs transition-all border
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs transition-all border shadow-sm
                             ${perfil.es_anfitrion_verificado 
                                 ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' 
                                 : 'bg-white text-gray-400 border-gray-300 hover:border-green-500 hover:text-green-600'}`}
@@ -130,7 +130,7 @@ const AdminVerifications = () => {
                         {/* Control Huésped */}
                         <button 
                             onClick={() => toggleVerificacion(perfil.id, 'huesped', !perfil.es_huesped_verificado)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs transition-all border
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs transition-all border shadow-sm
                             ${perfil.es_huesped_verificado 
                                 ? 'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200' 
                                 : 'bg-white text-gray-400 border-gray-300 hover:border-blue-500 hover:text-blue-600'}`}
@@ -141,8 +141,8 @@ const AdminVerifications = () => {
                     </div>
                 </div>
 
-                {/* Cuerpo: Documentos */}
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Cuerpo: Documentos (Ajustado a 5 columnas para incluir la Selfie) */}
+                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     
                     {/* 1. INE Frente */}
                     <DocumentCard 
@@ -158,7 +158,14 @@ const AdminVerifications = () => {
                         onView={() => setVisorDoc(perfil.identificacion_reverso)} 
                     />
 
-                    {/* 3. Datos Fiscales / Domicilio */}
+                    {/* 3. NUEVO: Selfie / Prueba de Vida */}
+                    <DocumentCard 
+                        title="Selfie (Prueba de Vida)" 
+                        file={perfil.foto_selfie} 
+                        onView={() => setVisorDoc(perfil.foto_selfie)} 
+                    />
+
+                    {/* 4. Datos Fiscales / Domicilio */}
                     <div className="space-y-4">
                         <DocumentCard 
                             title="Comp. Domicilio" 
@@ -173,7 +180,7 @@ const AdminVerifications = () => {
                         </div>
                     </div>
 
-                    {/* 4. Datos Huésped */}
+                    {/* 5. Datos Huésped */}
                     <div className="space-y-4">
                         <DocumentCard 
                             title="Constancia Estudios/Trabajo" 
@@ -182,8 +189,8 @@ const AdminVerifications = () => {
                         />
                         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <p className="text-[10px] font-bold text-gray-400 uppercase">Referencia</p>
-                            <p className="text-xs font-bold text-gray-700">{perfil.referencia_nombre}</p>
-                            <p className="text-xs text-gray-500">{perfil.referencia_telefono}</p>
+                            <p className="text-xs font-bold text-gray-700 truncate">{perfil.referencia_nombre || "Sin nombre"}</p>
+                            <p className="text-xs text-gray-500 font-mono">{perfil.referencia_telefono || "Sin teléfono"}</p>
                         </div>
                     </div>
 
@@ -195,7 +202,7 @@ const AdminVerifications = () => {
       {/* MODAL VISOR DE IMAGEN */}
       {visorDoc && (
           <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setVisorDoc(null)}>
-              <button className="absolute top-4 right-4 text-white hover:text-red-400">
+              <button className="absolute top-4 right-4 text-white hover:text-red-400 transition-colors">
                   <XIcon className="h-8 w-8" />
               </button>
               <img 
@@ -223,7 +230,7 @@ const DocumentCard = ({ title, file, onView }) => {
     const isPdf = typeof file === 'string' && file.toLowerCase().endsWith('.pdf');
 
     return (
-        <div className="border border-gray-200 rounded-lg overflow-hidden group relative h-32 bg-gray-100">
+        <div className="border border-gray-200 rounded-lg overflow-hidden group relative h-32 bg-gray-100 shadow-sm">
             {isPdf ? (
                 <div className="w-full h-full flex items-center justify-center bg-red-50 text-red-500">
                     <FileText className="h-10 w-10" />
@@ -239,17 +246,17 @@ const DocumentCard = ({ title, file, onView }) => {
             
             {/* Overlay */}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                <span className="text-white text-xs font-bold">{title}</span>
+                <span className="text-white text-xs font-bold text-center px-2">{title}</span>
                 <button 
                     onClick={(e) => { e.stopPropagation(); isPdf ? window.open(file, '_blank') : onView(); }}
-                    className="bg-white text-black p-2 rounded-full hover:bg-brand-50"
+                    className="bg-white text-black p-2 rounded-full hover:bg-brand-50 shadow-lg transform active:scale-95 transition-all"
                 >
                     {isPdf ? <ExternalLink className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
             </div>
 
             {/* Etiqueta siempre visible si no hay hover */}
-            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] p-1 text-center truncate group-hover:opacity-0">
+            <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm text-white text-[10px] p-1.5 text-center truncate group-hover:opacity-0 transition-opacity">
                 {title}
             </div>
         </div>
