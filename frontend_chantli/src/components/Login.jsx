@@ -66,6 +66,14 @@ const Login = () => {
     }
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem('chantli_token');
+    if (token) {
+      // Si ya hay un token, lo mandamos a Home inmediatamente.
+      // Usamos replace: true para que no pueda regresar al login usando el botón de "Atrás" del celular
+      navigate('/home', { replace: true }); 
+    }
+  }, [navigate]);
 
 
   return (
