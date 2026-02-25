@@ -49,20 +49,28 @@ class MensajeSerializer(serializers.ModelSerializer):
 
 # ACTUALIZA TU RESERVA SERIALIZER EXISTENTE ASI:
 class ReservaSerializer(serializers.ModelSerializer):
+    # Datos de la propiedad
     propiedad_titulo = serializers.ReadOnlyField(source='propiedad.titulo')
-    
-    # Datos del Huésped para que el Anfitrión sepa quién es
+    propiedad_precio = serializers.ReadOnlyField(source='propiedad.precio')
+    propiedad_imagen = serializers.ImageField(source='propiedad.imagen', read_only=True)
+    propiedad_direccion = serializers.ReadOnlyField(source='propiedad.direccion') # NUEVO
+
+    # Datos del Huésped (Lo que ya tenías para el host)
     huesped_nombre = serializers.ReadOnlyField(source='huesped.first_name')
     huesped_apellido = serializers.ReadOnlyField(source='huesped.last_name')
     huesped_foto = serializers.ImageField(source='huesped.perfil.foto_perfil', read_only=True)
     huesped_id = serializers.ReadOnlyField(source='huesped.id')
-    propiedad_precio = serializers.ReadOnlyField(source='propiedad.precio')
-    propiedad_imagen = serializers.ImageField(source='propiedad.imagen', read_only=True)
+
+    # NUEVO: Datos del Anfitrión (Para que el huésped los vea en su historial)
+    anfitrion_id = serializers.ReadOnlyField(source='propiedad.anfitrion.id')
+    anfitrion_nombre = serializers.ReadOnlyField(source='propiedad.anfitrion.first_name')
+    anfitrion_apellido = serializers.ReadOnlyField(source='propiedad.anfitrion.last_name')
+    anfitrion_username = serializers.ReadOnlyField(source='propiedad.anfitrion.username')
+    anfitrion_foto = serializers.ImageField(source='propiedad.anfitrion.perfil.foto_perfil', read_only=True)
 
     class Meta:
         model = Reserva
         fields = '__all__'
-
 
 class FotoPropiedadSerializer(serializers.ModelSerializer):
     class Meta:
