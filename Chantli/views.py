@@ -6,7 +6,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from django.shortcuts import get_object_or_404
 # Asegúrate de importar tus modelos y el serializer
-from .models import Pago, Reserva, Tarjeta
 from .serializers import PagoSerializer
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
