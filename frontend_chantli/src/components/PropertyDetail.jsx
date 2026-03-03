@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, Send, ChevronRight, Home, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, Send, ChevronRight, Home, ShieldCheck, User } from 'lucide-react';
 
 // --- IMPORTACIONES MAPA GOOGLE ---
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
@@ -12,6 +12,12 @@ import "react-datepicker/dist/react-datepicker.css";
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
+// Función de ayuda para formatear las URLs de las imágenes
+const getFileUrl = (path) => {
+    if (!path) return null;
+    return path.startsWith('http') ? path : `${API_URL}${path}`;
+};
+
 const PropertyDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -19,6 +25,7 @@ const PropertyDetail = () => {
   // Estados de datos
   const [propiedad, setPropiedad] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [anfitrionInfo, setAnfitrionInfo] = useState(null); // <--- NUEVO: Estado para guardar la info del anfitrión
   const [resenas, setResenas] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [diasBloqueados, setDiasBloqueados] = useState([]);
@@ -29,7 +36,7 @@ const PropertyDetail = () => {
 
   // Estados de UI
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false); // <--- NUEVO ESTADO PARA EL MODAL DE ÉXITO
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   
   // Estados del Calendario
   const [startDate, setStartDate] = useState(null);
@@ -79,7 +86,7 @@ const PropertyDetail = () => {
         : Promise.resolve({ is_favorite: false });
 
     Promise.all([fetchPropiedad, fetchUser, fetchFechas, fetchReviews, checkHistory, checkFavorite])
-      .then(([propData, userData, fechasData, reviewsData, historyData, favData]) => {
+      .then(async ([propData, userData, fechasData, reviewsData, historyData, favData]) => {
           setPropiedad(propData);
           setCurrentUser(userData);
           setResenas(reviewsData);
@@ -102,14 +109,28 @@ const PropertyDetail = () => {
               }
           });
           setDiasBloqueados(blockedDates);
+
+          // --- NUEVO: OBTENER LA INFO DEL ANFITRIÓN ---
+          const hostId = propData.anfitrion_id || propData.anfitrion;
+          if (hostId) {
+              try {
+                  const resHost = await fetch(`${API_URL}/api/public-profile/${hostId}/`);
+                  if (resHost.ok) {
+                      setAnfitrionInfo(await resHost.json());
+                  }
+              } catch (e) {
+                  console.error("Error al cargar info del anfitrión", e);
+              }
+          }
+
           setLoading(false);
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+          console.error(err);
+          setLoading(false);
+      });
   }, [id]);
 
-  // ========================================================
-  // LÓGICA FINANCIERA ACTUALIZADA (CON VALIDACIÓN DE HUÉSPED)
-  // ========================================================
   useEffect(() => {
     if (!startDate || !endDate || !propiedad) return;
     if (startDate >= endDate) {
@@ -165,9 +186,6 @@ const PropertyDetail = () => {
       }
   };
 
-  // ========================================================
-  // SOLICITUD DE RESERVA CON FLUJO ACTUALIZADO
-  // ========================================================
   const handleReserva = async (e) => {
     e.preventDefault();
     if (calculo.error || calculo.total === 0) return;
@@ -188,7 +206,6 @@ const PropertyDetail = () => {
             })
         });
         if (response.ok) {
-            // Cerramos el formulario y abrimos el Modal de Éxito
             setIsModalOpen(false);
             setShowSuccessModal(true);
         } else {
@@ -247,6 +264,12 @@ const PropertyDetail = () => {
 
   const hasCoordinates = propiedad.latitud && propiedad.longitud;
   const mapCenter = hasCoordinates ? { lat: parseFloat(propiedad.latitud), lng: parseFloat(propiedad.longitud) } : null;
+  const hostId = propiedad.anfitrion_id || propiedad.anfitrion;
+
+  // Calculamos la información a mostrar del anfitrión
+  const hostNombre = anfitrionInfo ? `${anfitrionInfo.first_name} ${anfitrionInfo.last_name || ''}`.trim() || anfitrionInfo.username : (propiedad.anfitrion_nombre || 'Usuario');
+  const hostFoto = anfitrionInfo?.perfil?.foto_perfil || anfitrionInfo?.foto_perfil;
+  const hostVerificado = anfitrionInfo?.perfil?.es_anfitrion_verificado || false;
 
   return (
     <div className="min-h-screen bg-white pb-28">
@@ -318,25 +341,35 @@ const PropertyDetail = () => {
         {/* --- ANFITRIÓN --- */}
         <div className="flex items-center justify-between mb-6">
             <div 
-                onClick={() => navigate(`/public-profile/${propiedad.anfitrion_id}`)}
+                onClick={() => navigate(`/public-profile/${hostId}`)}
                 className="flex items-center cursor-pointer hover:bg-gray-50 p-2 -ml-2 rounded-xl transition-colors group"
             >
-                <div className="h-12 w-12 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-lg mr-4 border-2 border-white shadow-sm group-hover:shadow-md transition-all">
-                    {propiedad.anfitrion_nombre ? propiedad.anfitrion_nombre.charAt(0).toUpperCase() : 'A'} 
+                <div className="h-12 w-12 bg-brand-100 rounded-full overflow-hidden flex items-center justify-center text-brand-700 font-bold text-lg mr-4 border-2 border-white shadow-sm group-hover:shadow-md transition-all relative">
+                    {hostFoto ? (
+                        <img src={getFileUrl(hostFoto)} className="w-full h-full object-cover" alt="Anfitrión" />
+                    ) : (
+                        hostNombre.charAt(0).toUpperCase()
+                    )}
+                    {hostVerificado && (
+                        <div className="absolute bottom-0 right-0 bg-white rounded-full">
+                            <ShieldCheck className="h-3 w-3 text-green-500 fill-green-50" />
+                        </div>
+                    )}
                 </div>
                 <div>
                     <p className="font-bold text-gray-900 group-hover:text-brand-600 transition-colors flex items-center gap-1">
-                        Anfitrión: {propiedad.anfitrion_nombre || "Usuario"} 
+                        Anfitrión: {hostNombre} 
                         <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </p>
-                    <p className="text-xs text-gray-500">Miembro verificado</p>
+                    <p className="text-xs text-gray-500">{hostVerificado ? 'Identidad verificada' : 'Miembro de Chantli'}</p>
                 </div>
             </div>
             
-            {currentUser && currentUser.id !== propiedad.anfitrion_id && (
+            {currentUser && currentUser.id !== hostId && (
                 <button 
-                    onClick={() => navigate(`/chat/${propiedad.anfitrion_id}`)}
+                    onClick={() => navigate(`/chat/${hostId}`)}
                     className="p-2 bg-gray-100 rounded-full text-brand-600 hover:bg-brand-50 transition"
+                    title="Enviar mensaje"
                 >
                     <MessageCircle className="h-6 w-6" />
                 </button>
@@ -451,7 +484,7 @@ const PropertyDetail = () => {
                                 <div className="flex items-center gap-3">
                                     <div className="h-8 w-8 bg-gray-200 rounded-full overflow-hidden">
                                         {review.autor_foto ? (
-                                            <img src={review.autor_foto} className="w-full h-full object-cover" />
+                                            <img src={getFileUrl(review.autor_foto)} className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs font-bold">
                                                 {review.autor_nombre ? review.autor_nombre.charAt(0) : 'U'}
@@ -487,7 +520,7 @@ const PropertyDetail = () => {
                 <span className="text-[10px] text-green-600 font-bold">Disponible ahora</span>
             </div>
             
-            {currentUser && currentUser.id === propiedad.anfitrion_id ? ( 
+            {currentUser && currentUser.id === hostId ? ( 
                 <button className="bg-gray-900 text-white font-bold py-3 px-8 rounded-xl opacity-50 cursor-not-allowed">Es tu propiedad</button>
             ) : (
                 <button onClick={() => setIsModalOpen(true)} className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-brand-200 transition-all active:scale-95">
@@ -575,7 +608,7 @@ const PropertyDetail = () => {
                 <button 
                     onClick={() => {
                         setShowSuccessModal(false);
-                        navigate('/historial-rentas'); // Lo llevamos al historial al dar clic
+                        navigate('/historial-rentas'); 
                     }} 
                     className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl hover:bg-black transition active:scale-95 shadow-md"
                 >
