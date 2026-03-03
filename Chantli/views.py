@@ -262,11 +262,20 @@ class MensajeViewSet(viewsets.ModelViewSet):
 
         return Response(conversaciones.values())
 
-
 class ReservaViewSet(viewsets.ModelViewSet):
-    queryset = Reserva.objects.all()
+    # 1. PRIMERO PONEMOS LAS PROPIEDADES DE LA CLASE
     serializer_class = ReservaSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    # 2. LUEGO DEFINIMOS LOS MÉTODOS
+    def get_queryset(self):
+        # Solo devuelve las reservas donde el usuario logueado sea el HUESPED
+        # o donde el usuario logueado sea el DUEÑO de la propiedad
+        usuario = self.request.user
+        
+        return Reserva.objects.filter(
+            Q(huesped=usuario) | Q(propiedad__anfitrion=usuario)
+        ).order_by('-fecha_creacion')
 
     @action(detail=False, methods=['get'])
     def solicitudes_recibidas(self, request):
@@ -291,7 +300,10 @@ class ReservaViewSet(viewsets.ModelViewSet):
             "body": f"{self.request.user.first_name or self.request.user.username} quiere rentar tu propiedad.",
             "url": "/host" 
         }
-        send_user_notification(user=dueño, payload=payload, ttl=1000)
+        try:
+            send_user_notification(user=dueño, payload=payload, ttl=1000)
+        except Exception as e:
+            print("Error enviando push:", e)
 
     @action(detail=True, methods=['patch'])
     def responder(self, request, pk=None):
@@ -317,7 +329,10 @@ class ReservaViewSet(viewsets.ModelViewSet):
                 "body": f"El anfitrión aceptó tu solicitud para {reserva.propiedad.titulo}. Entra para pagar.",
                 "url": "/home" # Puedes mandarlo a un listado de reservas pendientes
             }
-            send_user_notification(user=reserva.huesped, payload=payload, ttl=1000)
+            try:
+                send_user_notification(user=reserva.huesped, payload=payload, ttl=1000)
+            except Exception as e:
+                print("Error enviando push:", e)
 
         elif nuevo_estado == 'rechazada':
             Notificacion.objects.create(
@@ -331,9 +346,11 @@ class ReservaViewSet(viewsets.ModelViewSet):
                 "body": f"Lo sentimos, el anfitrión no aceptó la solicitud para {reserva.propiedad.titulo}.",
                 "url": "/home"
             }
-            send_user_notification(user=reserva.huesped, payload=payload, ttl=1000)
+            try:
+                send_user_notification(user=reserva.huesped, payload=payload, ttl=1000)
+            except Exception as e:
+                print("Error enviando push:", e)
 
-        
         return Response({'status': 'ok', 'estado': reserva.estado})
     
 

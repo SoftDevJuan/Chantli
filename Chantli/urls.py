@@ -4,7 +4,7 @@ from .views import *
 
 router = DefaultRouter()
 router.register(r'propiedades', PropiedadViewSet)
-router.register(r'reservas', ReservaViewSet)
+router.register(r'reservas', ReservaViewSet, basename='reserva')
 router.register(r'notificaciones', NotificacionViewSet, basename='notificacion')
 router.register(r'mensajes', MensajeViewSet, basename='mensaje')
 router.register(r'tarjetas', TarjetaViewSet, basename='tarjeta')
