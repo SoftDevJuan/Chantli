@@ -85,8 +85,33 @@ const Home = () => {
   const [activeFilter, setActiveFilter] = useState('Todos');
 
   // Función para cerrar sesión
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm("¿Seguro que quieres salir?")) {
+        const token = localStorage.getItem('chantli_token');
+        
+        // 1. AVISAR A DJANGO QUE DESVINCULE LAS NOTIFICACIONES DE ESTE CELULAR
+        if ('serviceWorker' in navigator && token) {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.getSubscription();
+                
+                if (subscription) {
+                    await fetch(`${API_URL}/api/webpush/unsubscribe/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Token ${token}`
+                        },
+                        // Solo necesitamos enviarle el endpoint para que Django sepa qué buzón borrar
+                        body: JSON.stringify({ endpoint: subscription.endpoint })
+                    });
+                }
+            } catch (error) {
+                console.error("Error al desvincular notificaciones:", error);
+            }
+        }
+
+        // 2. AHORA SÍ, BORRAMOS EL TOKEN Y SALIMOS
         localStorage.removeItem('chantli_token');
         navigate('/');
     }

@@ -757,3 +757,22 @@ class SubscribePushView(APIView):
         )
 
         return Response({'status': 'Dispositivo suscrito con éxito'}, status=status.HTTP_201_CREATED)
+
+
+class UnsubscribePushView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        endpoint = request.data.get('endpoint')
+        
+        if not endpoint:
+            return Response({'error': 'Falta el endpoint'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Buscamos y borramos la relación exacta entre este usuario y este navegador
+        # Usamos filter().delete() en lugar de get() para evitar errores si hay duplicados
+        PushInformation.objects.filter(
+            user=request.user, 
+            subscription__endpoint=endpoint
+        ).delete()
+
+        return Response({'status': 'Dispositivo desvinculado con éxito'}, status=status.HTTP_200_OK)

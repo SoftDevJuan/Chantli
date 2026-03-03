@@ -23,4 +23,5 @@ urlpatterns = [
     path('google-login/', GoogleLoginView.as_view(), name='google-login'),
     path('public-profile/<int:pk>/', PublicUserProfileView.as_view()),
     path('webpush/subscribe/', SubscribePushView.as_view(), name='webpush-subscribe'),
+    path('webpush/unsubscribe/', UnsubscribePushView.as_view(), name='webpush-unsubscribe'),
 ]
