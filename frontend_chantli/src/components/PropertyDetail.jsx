@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, Send, ChevronRight, ChevronLeft, Home, ShieldCheck, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, Send, ChevronRight, ChevronLeft, ShieldCheck, Image as ImageIcon, Search, Filter } from 'lucide-react';
 
 // --- IMPORTACIONES MAPA GOOGLE ---
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
@@ -38,7 +38,7 @@ const PropertyDetail = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   
   // Estados para la Galería Inline
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'carousel'
+  const [viewMode, setViewMode] = useState('grid'); 
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   // Estados del Calendario
@@ -53,6 +53,9 @@ const PropertyDetail = () => {
   const [calculo, setCalculo] = useState({
       dias: 0, renta: 0, iva: 0, deposito: 0, total: 0, error: ''
   });
+
+  // --- ESTADO PARA BÚSQUEDA ---
+  const [searchText, setSearchText] = useState('');
 
   const { isLoaded } = useJsApiLoader({
       id: 'google-map-script',
@@ -221,6 +224,17 @@ const PropertyDetail = () => {
       } catch (error) { console.error(error); } finally { setReviewLoading(false); }
   };
 
+  // --- MANEJADORES DE BÚSQUEDA ---
+  const handleSearchAction = () => {
+      if (searchText.trim()) {
+          navigate('/home', { state: { searchQuery: searchText } });
+      }
+  };
+
+  const handleSearchKeyDown = (e) => {
+      if (e.key === 'Enter') handleSearchAction();
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div></div>;
   if (!propiedad) return <div>No encontrada</div>;
 
@@ -246,21 +260,70 @@ const PropertyDetail = () => {
         .react-datepicker { border: 1px solid #e5e7eb; border-radius: 1rem; font-family: inherit; overflow: hidden; }
       `}</style>
 
-      {/* HEADER FLOTANTE */}
-      <div className="fixed top-0 left-0 right-0 p-4 flex justify-between z-20 pointer-events-none">
-        <button onClick={() => navigate(-1)} className="bg-white/90 p-2 rounded-full shadow-md backdrop-blur-md pointer-events-auto hover:bg-white transition">
-            <ArrowLeft className="h-6 w-6 text-gray-800" />
-        </button>
+      {/* ======================================================== */}
+      {/* HEADER FLOTANTE CON LOGO (IMAGEN), BUSCADOR Y ACCIONES     */}
+      {/* ======================================================== */}
+      <div className="fixed top-0 left-0 right-0 p-4 flex justify-between items-center z-20 pointer-events-none gap-2 sm:gap-4">
+        
+        {/* --- IZQUIERDA: Píldora (Volver + Logo Imagen) --- */}
+        <div className="flex items-center pointer-events-auto flex-shrink-0">
+            <div className="bg-white/90 rounded-full shadow-md backdrop-blur-md flex items-center p-1 border border-gray-100 transition hover:bg-white">
+                <button 
+                    onClick={() => navigate(-1)} 
+                    className="p-2 rounded-full hover:bg-gray-100 transition active:scale-95"
+                    title="Volver"
+                >
+                    <ArrowLeft className="h-5 w-5 text-gray-700" />
+                </button>
+                <div className="h-5 w-px bg-gray-200 mx-1"></div>
+                <div 
+                    onClick={() => navigate('/home')} 
+                    className="flex items-center justify-center px-2 pr-3 cursor-pointer hover:opacity-80 transition"
+                    title="Ir a Inicio"
+                >
+                    {/* AQUÍ VA LA IMAGEN DEL LOGO */}
+                    <img src="/logo-chantli.png" alt="Chantli" className="h-6 object-contain" onError={(e) => { e.target.onerror = null; e.target.outerHTML = '<span class="font-extrabold text-lg text-brand-600 tracking-tighter">Chantli</span>'; }} />
+                </div>
+            </div>
+        </div>
+
+        {/* --- CENTRO: Barra de Búsqueda (Al estilo Home) --- */}
+        <div className="flex-1 max-w-md hidden md:block pointer-events-auto">
+             <div className="relative group shadow-md rounded-full bg-white/90 backdrop-blur-md border border-gray-100 overflow-hidden transition-all focus-within:shadow-lg focus-within:ring-2 focus-within:ring-brand-200">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-brand-600 transition-colors" />
+                <input 
+                    type="text" 
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    placeholder="Buscar en Chantli..." 
+                    className="w-full bg-transparent py-2.5 pl-11 pr-12 text-sm focus:outline-none font-medium text-gray-700 placeholder-gray-400"
+                />
+                <button 
+                    onClick={handleSearchAction}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 bg-gray-100 rounded-full hover:bg-gray-200 hover:text-brand-600 transition-colors active:scale-95"
+                    title="Buscar"
+                >
+                    <Filter className="h-4 w-4 text-gray-600" />
+                </button>
+            </div>
+        </div>
          
-        <div className="flex gap-3 pointer-events-auto">
-            <button onClick={() => navigate('/home')} className="bg-white/90 p-2 rounded-full shadow-md backdrop-blur-md hover:bg-white transition">
-                <Home className="h-6 w-6 text-gray-800" />
+        {/* --- DERECHA: Acciones (Fav, Compartir) --- */}
+        <div className="flex gap-2 sm:gap-3 pointer-events-auto flex-shrink-0">
+            <button 
+                onClick={handleToggleFavorite} 
+                disabled={favLoading} 
+                className="bg-white/90 p-2.5 rounded-full shadow-md backdrop-blur-md hover:bg-white hover:scale-105 transition-all disabled:opacity-70"
+                title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+            >
+                <Heart className={`h-5 w-5 transition-colors duration-300 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-800'}`} />
             </button>
-            <button onClick={handleToggleFavorite} disabled={favLoading} className="bg-white/90 p-2 rounded-full shadow-md backdrop-blur-md hover:scale-105 transition-transform disabled:opacity-70">
-                <Heart className={`h-6 w-6 transition-colors duration-300 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-800'}`} />
-            </button>
-            <button className="bg-white/90 p-2 rounded-full shadow-md backdrop-blur-md hover:bg-white transition">
-                <Share2 className="h-6 w-6 text-gray-800" />
+            <button 
+                className="bg-white/90 p-2.5 rounded-full shadow-md backdrop-blur-md hover:bg-white hover:scale-105 transition-all hidden sm:block"
+                title="Compartir propiedad"
+            >
+                <Share2 className="h-5 w-5 text-gray-800" />
             </button>
         </div>
       </div>
@@ -317,9 +380,7 @@ const PropertyDetail = () => {
         )}
       </div>
 
-      {/* ======================================================== */}
-      {/* CONTENIDO PRINCIPAL (REORDENADO)                           */}
-      {/* ======================================================== */}
+      {/* CONTENIDO PRINCIPAL */}
       <div className="max-w-4xl mx-auto mt-6 px-4 sm:px-6">
         
         {/* Título y Ubicación */}
@@ -392,7 +453,7 @@ const PropertyDetail = () => {
             </div>
         </div>
 
-        {/* 4. Anfitrión (Reubicado aquí) */}
+        {/* 4. Anfitrión */}
         <div className="mb-10 pt-8 border-t border-gray-100">
             <h3 className="font-bold text-xl mb-6 text-gray-900">Conoce a tu anfitrión</h3>
             <div className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm">

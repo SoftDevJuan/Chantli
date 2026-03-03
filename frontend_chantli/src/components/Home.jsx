@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // <-- Asegúrate de tener useLocation aquí
 import { 
     MapPin, Search, Home as HomeIcon, Heart, MessageSquare, 
     LogOut, Filter, Plus, User, LayoutDashboard, Bell, ShieldCheck, Loader2 
@@ -8,7 +8,6 @@ import {
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 // --- 1. CONFIGURACIÓN DE NOTIFICACIONES PUSH ---
-// Reemplaza esto con la LLAVE PÚBLICA que generaste en vapidkeys.com
 const PUBLIC_VAPID_KEY = 'BFNNtkj2cYP6XF7DhCKi637rSmn5orTcWMHiFFZCQQAdNoihC_pgr7Q0Gr2XYi6T1S5h74-AgbcvagVw1C5Qf-o'; 
 
 const urlBase64ToUint8Array = (base64String) => {
@@ -20,22 +19,15 @@ const urlBase64ToUint8Array = (base64String) => {
 
 const subscribeToPush = async (token) => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-
     try {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') return;
-
         const registration = await navigator.serviceWorker.ready;
-        
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
         });
-
-        // --- EL ARREGLO ESTÁ AQUÍ ---
-        // Extraemos las partes exactas que Django WebPush pide
         const subData = subscription.toJSON();
-        
         const payload = {
             status_type: 'subscribe',
             subscription: {
@@ -47,8 +39,7 @@ const subscribeToPush = async (token) => {
             },
             browser: navigator.userAgent
         };
-
-        await fetch(`${API_URL}/api/webpush/subscribe/`, { // <- Le regresamos la barrita final aquí
+        await fetch(`${API_URL}/api/webpush/subscribe/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -56,17 +47,15 @@ const subscribeToPush = async (token) => {
             },
             body: JSON.stringify(payload)
         });
-        
         console.log("📱 Suscripción Push guardada en Django!");
     } catch (error) {
         console.error("Error al suscribir a Push:", error);
     }
 };
-// --------------------------------------------------------
-
 
 const Home = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // <--- ESTO FALTABA: Inicializar location
   
   // --- ESTADOS DE ROLES ---
   const [isHost, setIsHost] = useState(false);
@@ -75,26 +64,21 @@ const Home = () => {
   const [propiedades, setPropiedades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadMessages, setUnreadMessages] = useState(0);
-  const [userPhoto, setUserPhoto] = useState(null); // ESTADO DE LA FOTO
+  const [userPhoto, setUserPhoto] = useState(null); 
   
-  // NUEVO ESTADO PARA NOTIFICACIONES GENERALES
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   // --- ESTADOS DE BÚSQUEDA ---
   const [searchText, setSearchText] = useState('');
   const [activeFilter, setActiveFilter] = useState('Todos');
 
-  // Función para cerrar sesión
   const handleLogout = async () => {
     if (window.confirm("¿Seguro que quieres salir?")) {
         const token = localStorage.getItem('chantli_token');
-        
-        // 1. AVISAR A DJANGO QUE DESVINCULE LAS NOTIFICACIONES DE ESTE CELULAR
         if ('serviceWorker' in navigator && token) {
             try {
                 const registration = await navigator.serviceWorker.ready;
                 const subscription = await registration.pushManager.getSubscription();
-                
                 if (subscription) {
                     await fetch(`${API_URL}/api/webpush/unsubscribe/`, {
                         method: 'POST',
@@ -102,7 +86,6 @@ const Home = () => {
                             'Content-Type': 'application/json',
                             'Authorization': `Token ${token}`
                         },
-                        // Solo necesitamos enviarle el endpoint para que Django sepa qué buzón borrar
                         body: JSON.stringify({ endpoint: subscription.endpoint })
                     });
                 }
@@ -110,14 +93,11 @@ const Home = () => {
                 console.error("Error al desvincular notificaciones:", error);
             }
         }
-
-        // 2. AHORA SÍ, BORRAMOS EL TOKEN Y SALIMOS
         localStorage.removeItem('chantli_token');
         navigate('/');
     }
   };
 
-  // --- FUNCIÓN PRINCIPAL DE CARGA (Con Filtros) ---
   const fetchProperties = (queryParams = '') => {
       setLoading(true);
       const token = localStorage.getItem('chantli_token');
@@ -145,16 +125,27 @@ const Home = () => {
         });
   };
 
-  // Carga inicial
+  // --- USE EFFECT PRINCIPAL (Carga Inicial y Búsqueda Externa) ---
   useEffect(() => {
-    fetchProperties(); // Carga todo al inicio
+    // 1. REVISAR SI LLEGAMOS AQUÍ DESDE OTRA PÁGINA CON UNA BÚSQUEDA
+    if (location.state && location.state.searchQuery) {
+        const query = location.state.searchQuery;
+        setSearchText(query); // Llenamos el input visualmente
+        setActiveFilter('Custom'); // Quitamos los filtros rápidos
+        fetchProperties(`?search=${query}`); // Buscamos en la API
+        
+        // Limpiamos el state de la URL para que si el usuario recarga la página, 
+        // no se vuelva a aplicar la búsqueda obligatoriamente
+        window.history.replaceState({}, document.title);
+    } else {
+        // Si entramos normal, cargamos todo
+        fetchProperties(); 
+    }
 
-    // Cargar Usuario y verificar Roles
+    // 2. Cargar Usuario y verificar Roles
     const token = localStorage.getItem('chantli_token');
     if (token) {
-        // --- 2. REGISTRAR EL DISPOSITIVO PARA NOTIFICACIONES ---
         subscribeToPush(token);
-        // -------------------------------------------------------
 
         const headers = { 'Authorization': `Token ${token}` };
         fetch(`${API_URL}/api/me/`, { headers })
@@ -164,8 +155,6 @@ const Home = () => {
                 const rol = userData.rol || userData.perfil?.rol;
                 if (rol === 'anfitrion') setIsHost(true);
                 if (userData.is_staff || userData.is_superuser) setIsAdmin(true);
-                
-                // AQUÍ GUARDAMOS LA FOTO DEL PERFIL
                 if (userData.perfil?.foto_perfil) {
                     setUserPhoto(userData.perfil.foto_perfil);
                 }
@@ -182,11 +171,11 @@ const Home = () => {
         setIsHost(false);
         setIsAdmin(false);
     }
-  }, [navigate]);
+  }, [navigate, location.state]); // <-- IMPORTANTE: agregamos location.state a las dependencias
 
-  // --- MANEJADORES DE BÚSQUEDA ---
+  // --- MANEJADORES DE BÚSQUEDA MANUAL EN HOME ---
   const handleSearch = () => {
-      setActiveFilter('Custom'); // Desactivar chips visualmente
+      setActiveFilter('Custom'); 
       fetchProperties(`?search=${searchText}`);
   };
 
@@ -416,7 +405,6 @@ const Home = () => {
             <span className="text-[10px] font-bold">Inicio</span>
         </button>
 
-        {/* --- NAVEGACIÓN A FAVORITOS --- */}
         <button 
             onClick={() => navigate('/favorites')}
             className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group"
@@ -432,7 +420,6 @@ const Home = () => {
             >
                 <div className="relative">
                     <LayoutDashboard className="h-6 w-6 mb-1 group-active:scale-90 transition-transform text-brand-900" />
-                    {/* SOLO MUESTRA ALERTA SI HAY MENSAJES PENDIENTES */}
                     {unreadMessages > 0 && (
                         <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
                     )}
