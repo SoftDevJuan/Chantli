@@ -203,10 +203,24 @@ class MensajeViewSet(viewsets.ModelViewSet):
             except:
                 pass
             
+            # --- 1. LÓGICA PARA CALCULAR SI ESTÁ EN LÍNEA ---
+            is_online = False
+            try:
+                if target_user.perfil.ultima_actividad:
+                    # Restamos la hora actual menos su última actividad
+                    tiempo_pasado = timezone.now() - target_user.perfil.ultima_actividad
+                    # Si han pasado menos de 3 minutos (180 segundos), lo consideramos conectado
+                    if tiempo_pasado.total_seconds() < 180:
+                        is_online = True
+            except:
+                pass # Por si ocurre un error o el usuario no tiene perfil
+            # ------------------------------------------------
+
             data = {
                 'id': target_user.id,
                 'nombre': f"{target_user.first_name} {target_user.last_name}".strip() or target_user.username,
-                'foto': foto_url
+                'foto': foto_url,
+                'isOnline': is_online # --- 2. ENVIAMOS LA VARIABLE A REACT ---
             }
             return Response(data)
         except User.DoesNotExist:
@@ -215,6 +229,16 @@ class MensajeViewSet(viewsets.ModelViewSet):
     # --- 3. Actualizar Conversación (Marcar como leídos al abrir) ---
     @action(detail=False, methods=['get'], url_path='conversacion/(?P<user_id>\d+)')
     def conversacion(self, request, user_id=None):
+        
+        # --- NUEVO: REGISTRAR QUE EL USUARIO ACTUAL ESTÁ VIVO (LATIDO) ---
+        try:
+            perfil = request.user.perfil
+            perfil.ultima_actividad = timezone.now()
+            perfil.save(update_fields=['ultima_actividad']) # Solo guardamos este campo para que sea súper rápido
+        except:
+            pass
+        # -----------------------------------------------------------------
+
         # A. Marcar como leídos los mensajes que ME enviaron a MÍ en esta charla
         Mensaje.objects.filter(
             remitente_id=user_id, 

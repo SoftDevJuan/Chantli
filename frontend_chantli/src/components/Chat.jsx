@@ -24,7 +24,12 @@ const Chat = () => {
     })
     .then(r => r.json())
     .then(data => {
-        if (!data.error) setOtroUsuario(data);
+        if (!data.error) {
+            // Simulamos el estado 'en línea' por ahora
+            // En una app real, esto vendría del backend
+            const isOnline = Math.random() > 0.5; // Probabilidad del 50%
+            setOtroUsuario({ ...data, isOnline });
+        }
     })
     .catch(err => console.error(err));
   }, [userId]);
@@ -86,26 +91,35 @@ const Chat = () => {
         </button>
         <button 
             onClick={() => navigate('/home')} 
-            className="p-2 rounded-full hover:bg-brand-50 transition text-brand-600"
+            className="p-2 rounded-full hover:bg-brand-50 transition text-brand-600 mr-3"
             title="Ir al Inicio">
             <Home className="h-6 w-6" />
         </button>
         
         {otroUsuario ? (
-            <div className="flex items-center">
-                <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center mr-3 border border-gray-300 overflow-hidden">
-                    {otroUsuario.foto ? (
-                        <img src={otroUsuario.foto} className="h-full w-full object-cover" alt="User" />
-                    ) : (
-                        <span className="text-gray-600 font-bold">{otroUsuario.nombre?.charAt(0)}</span>
+            <div 
+                className="flex items-center cursor-pointer group"
+                onClick={() => navigate(`/public-profile/${userId}`)}
+                title="Ver perfil"
+            >
+                <div className="relative h-10 w-10 mr-3">
+                    <div className="h-full w-full bg-gray-200 rounded-full flex items-center justify-center border border-gray-300 overflow-hidden group-hover:opacity-80 transition-opacity">
+                        {otroUsuario.foto ? (
+                            <img src={otroUsuario.foto} className="h-full w-full object-cover" alt="User" />
+                        ) : (
+                            <span className="text-gray-600 font-bold">{otroUsuario.nombre?.charAt(0)}</span>
+                        )}
+                    </div>
+                    {otroUsuario.isOnline && (
+                        <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></div>
                     )}
                 </div>
                 <div>
-                    <h1 className="font-bold text-gray-900 leading-tight text-sm sm:text-base">
+                    <h1 className="font-bold text-gray-900 leading-tight text-sm sm:text-base group-hover:text-brand-600 transition-colors">
                         {otroUsuario.nombre}
                     </h1>
-                    <p className="text-xs text-green-600 font-medium flex items-center">
-                        En línea
+                    <p className={`text-xs font-medium flex items-center ${otroUsuario.isOnline ? 'text-green-600' : 'text-gray-400'}`}>
+                        {otroUsuario.isOnline ? 'En línea' : 'Desconectado'}
                     </p>
                 </div>
             </div>
@@ -130,8 +144,8 @@ const Chat = () => {
                 <div className={`
                     max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm relative break-words
                     ${msg.es_mio 
-                        ? 'bg-blue-100 text-gray-900 rounded-br-none border border-blue-200' // TUS MENSAJES: Azul claro, texto oscuro
-                        : 'bg-white text-gray-900 border border-gray-200 rounded-bl-none' // RECIBIDOS: Blanco, texto oscuro
+                        ? 'bg-blue-100 text-gray-900 rounded-br-none border border-blue-200' 
+                        : 'bg-white text-gray-900 border border-gray-200 rounded-bl-none' 
                     }
                 `}>
                     {msg.contenido}
