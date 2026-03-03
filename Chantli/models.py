@@ -45,6 +45,8 @@ class PerfilUsuario(models.Model):
     acepto_terminos_y_reglamento = models.BooleanField(default=False)
     fecha_aceptacion = models.DateTimeField(auto_now=True)
 
+    ultima_actividad = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         return f"{self.usuario.username} - {self.rol}"
 
