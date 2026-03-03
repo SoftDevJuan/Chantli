@@ -75,26 +75,30 @@ const Home = () => {
   const handleLogout = async () => {
     if (window.confirm("¿Seguro que quieres salir?")) {
         const token = localStorage.getItem('chantli_token');
+        
+        // 1. Borramos sesión y salimos INMEDIATAMENTE para que la UI no se trabe
+        localStorage.removeItem('chantli_token');
+        navigate('/');
+        
+        // 2. Avisamos a Django en segundo plano (sin 'await' que bloquee el código)
         if ('serviceWorker' in navigator && token) {
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                const subscription = await registration.pushManager.getSubscription();
+            navigator.serviceWorker.ready.then(registration => {
+                return registration.pushManager.getSubscription();
+            }).then(subscription => {
                 if (subscription) {
-                    await fetch(`${API_URL}/api/webpush/unsubscribe/`, {
+                    fetch(`${API_URL}/api/webpush/unsubscribe/`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Token ${token}`
                         },
                         body: JSON.stringify({ endpoint: subscription.endpoint })
-                    });
+                    }).catch(e => console.error("Error de red en unsubscribe:", e));
                 }
-            } catch (error) {
+            }).catch(error => {
                 console.error("Error al desvincular notificaciones:", error);
-            }
+            });
         }
-        localStorage.removeItem('chantli_token');
-        navigate('/');
     }
   };
 

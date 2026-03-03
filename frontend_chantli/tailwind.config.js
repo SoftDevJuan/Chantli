@@ -7,21 +7,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Aquí definimos tus colores personalizados "brand"
+        // --- NUEVA PALETA: Atardecer en la Ciudad ---
         brand: {
-          50: '#eef2ff',  // Fondo muy claro (casi blanco)
-          100: '#e0e7ff', // Fondo claro
-          200: '#c7d2fe', // Bordes suaves / Fondos secundarios
-          300: '#ccd2ef', // Bordes activos
-          400: '#818cf8', // Iconos inactivos / Texto secundario
-          500: '#6366f1', // Color principal suave
-          600: '#dcdbf3', // COLOR PRINCIPAL (Botones, Links, Iconos activos)
-          700: '#4338ca', // Hover de botones
-          800: '#3730a3', // Texto oscuro / Encabezados
-          900: '#312e81', // Fondos muy oscuros / Footer
-          950: '#1e1b4b', // Casi negro
+          50: '#fdf8f6',  // Fondo ultra claro con toque terracotta
+          100: '#fbeee9', // Fondo claro terracotta
+          200: '#f9ddd3', // Bordes suaves
+          300: '#f6c5b5', // Bordes activos terracotta
+          400: '#f19c83', // Iconos inactivos / Texto secundario
+          500: '#e16f4f', // Color principal suave terracotta
+          600: '#d9532d', // COLOR PRINCIPAL (Botones, Links, Iconos activos)
+          700: '#b64223', // Hover de botones terracotta
+          800: '#92341d', // Texto terracotta oscuro / Encabezados
+          900: '#762d1a', // Fondos terracotta muy oscuros
+          950: '#401509', // Terracotta casi negro
         },
-        // Opcional: Si quieres asegurar grises neutros y limpios
+        // Grises Neutros y Limpios
         gray: {
           50: '#f9fafb',
           100: '#f3f4f6',
@@ -35,7 +35,11 @@ export default {
           900: '#111827',
         }
       },
-      // Animaciones personalizadas (que usamos en los modales)
+      fontFamily: {
+        // Mantenemos DM Sans por ahora, ya que es elegante
+        sans: ['"DM Sans"', 'sans-serif'], 
+      },
+      // Animaciones personalizadas
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',
         'slide-up': 'slideUp 0.3s ease-out',
