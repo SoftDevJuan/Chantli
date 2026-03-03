@@ -583,16 +583,66 @@ class PerfilUsuarioViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['patch'], parser_classes=[MultiPartParser, FormParser])
     def subir_documentos(self, request):
         perfil = self.get_object()
+
+        # ==================================================
+        # 1. LÓGICA DE CANCELACIÓN DE VALIDACIÓN
+        # ==================================================
+        if request.data.get('cancelar_validacion') == 'true':
+            # Eliminamos los archivos físicamente del servidor para no acumular basura
+            if perfil.identificacion_frente: perfil.identificacion_frente.delete(save=False)
+            if perfil.identificacion_reverso: perfil.identificacion_reverso.delete(save=False)
+            if perfil.foto_selfie: perfil.foto_selfie.delete(save=False)
+            if perfil.comprobante_domicilio_propiedad: perfil.comprobante_domicilio_propiedad.delete(save=False)
+            if perfil.constancia_estudios_trabajo: perfil.constancia_estudios_trabajo.delete(save=False)
+
+            # Reseteamos los estatus
+            perfil.es_huesped_verificado = False
+            perfil.es_anfitrion_verificado = False
+            perfil.acepto_terminos_y_reglamento = False
+            perfil.requiere_deposito_garantia = True # Vuelve a requerir depósito
+            
+            perfil.save()
+            return Response({"status": "Validación cancelada y documentos eliminados"}, status=status.HTTP_200_OK)
+
+        # ==================================================
+        # 2. LÓGICA NORMAL (GUARDAR / EDITAR)
+        # ==================================================
         serializer = self.get_serializer(perfil, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            
             if perfil.constancia_estudios_trabajo:
                 perfil.requiere_deposito_garantia = False
                 perfil.save()
+
+            # ==================================================
+            # 3. NOTIFICACIONES AL EDITAR
+            # ==================================================
+            if request.data.get('fue_editado') == 'true':
+                
+                # A) WebPush al Usuario
+                try:
+                    payload_user = {"head": "Validación en proceso", "body": "Tus documentos han sido actualizados y enviados a revisión."}
+                    send_user_notification(user=request.user, payload=payload_user, ttl=1000)
+                except Exception as e:
+                    print("Error enviando push al usuario:", e)
+
+                # B) WebPush a los Administradores
+                admins = User.objects.filter(is_staff=True)
+                for admin in admins:
+                    try:
+                        payload_admin = {"head": "Nueva Validación Pendiente", "body": f"@{request.user.username} ha subido/actualizado sus documentos."}
+                        send_user_notification(user=admin, payload=payload_admin, ttl=1000)
+                    except Exception as e:
+                        pass
+                
+                # NOTA: Si creas un modelo 'Notificacion' en base de datos para la "campanita", créalas aquí también.
+
             return Response(serializer.data)
+        
         return Response(serializer.errors, status=400)
     
-    @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def admin_pendientes(self, request):
         perfiles = PerfilUsuario.objects.filter(
             Q(identificacion_frente__isnull=False) | Q(constancia_estudios_trabajo__isnull=False)
@@ -601,7 +651,7 @@ class PerfilUsuarioViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(perfiles, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['patch'], permission_classes=[IsAdminUser])
+    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAdminUser])
     def admin_verificar(self, request, pk=None):
         try:
             perfil = PerfilUsuario.objects.get(pk=pk)
@@ -609,15 +659,30 @@ class PerfilUsuarioViewSet(viewsets.ModelViewSet):
             return Response({"error": "Perfil no encontrado"}, status=404)
 
         tipo = request.data.get('tipo')
-        valor = request.data.get('valor')
+        valor = request.data.get('valor') # True o False
 
         if tipo == 'anfitrion':
             perfil.es_anfitrion_verificado = valor
         elif tipo == 'huesped':
             perfil.es_huesped_verificado = valor
-            if valor: perfil.requiere_deposito_garantia = False
+            if valor: 
+                perfil.requiere_deposito_garantia = False
         
         perfil.save()
+
+        # ==================================================
+        # NOTIFICAR AL USUARIO SU RESULTADO DE VALIDACIÓN
+        # ==================================================
+        try:
+            estado_texto = "APROBADO" if valor else "REVOCADO"
+            payload_resultado = {
+                "head": f"Perfil de {tipo.capitalize()} {estado_texto}", 
+                "body": f"Tu validación como {tipo} ha sido procesada por el equipo de Chantli."
+            }
+            send_user_notification(user=perfil.usuario, payload=payload_resultado, ttl=1000)
+        except Exception as e:
+            print("Error enviando push de resultado:", e)
+
         return Response({"status": "Actualizado", "anfitrion": perfil.es_anfitrion_verificado, "huesped": perfil.es_huesped_verificado})
     
 
