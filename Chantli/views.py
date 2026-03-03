@@ -101,6 +101,19 @@ class PropiedadViewSet(viewsets.ModelViewSet):
             })
         return Response(data)
 
+    @action(detail=False, methods=['get'], url_path='por_usuario/(?P<user_id>\d+)')
+    def por_usuario(self, request, user_id=None):
+        # Esta ruta filtrará las propiedades por el ID del dueño
+        # No requiere autenticación porque los perfiles son públicos
+        propiedades = Propiedad.objects.filter(anfitrion_id=user_id)
+        
+        # Opcional: Podrías filtrar solo las propiedades 'activas' si tienes ese campo
+        # propiedades = Propiedad.objects.filter(anfitrion_id=user_id, activa=True)
+        
+        serializer = self.get_serializer(propiedades, many=True)
+        return Response(serializer.data)
+
+
     @action(detail=False, methods=['get'])
     def resumen_anfitrion(self, request):
         usuario = request.user

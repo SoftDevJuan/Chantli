@@ -38,13 +38,10 @@ const PublicProfile = () => {
             }
 
             // 3. Propiedades del Usuario (Si es anfitrión)
-            const resProps = await fetch(`${API_URL}/api/propiedades/mis_propiedades/?user_id=${id}`); 
-            // Nota: En tu backend 'mis_propiedades' filtra por request.user. 
-            // Para ver propiedades de OTRO, usa el endpoint general filtrado: /api/propiedades/?anfitrion=${id}
-            // Usaremos el general filtrado por ID:
-            const resPropsPublic = await fetch(`${API_URL}/api/propiedades/?anfitrion=${id}`);
-            if (resPropsPublic.ok) setUserProperties(await resPropsPublic.json());
-
+           const resPropsPublic = await fetch(`${API_URL}/api/propiedades/por_usuario/${id}/`);
+            if (resPropsPublic.ok) {
+                setUserProperties(await resPropsPublic.json());
+            }
             // 4. Reseñas del Usuario
             const resReviews = await fetch(`${API_URL}/api/resenas-usuario/usuario/?id=${id}`);
             if (resReviews.ok) setReviews(await resReviews.json());
