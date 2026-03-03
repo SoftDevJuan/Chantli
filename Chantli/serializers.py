@@ -124,7 +124,7 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name', 'last_name',
             'rol', 'foto_perfil', 'telefono', 'biografia',
             'is_superuser', 'is_staff',
-            'perfil', # <--- NO OLVIDES AGREGARLO AQUI
+            'perfil', 
         ]
 
 class RegistroSerializer(serializers.ModelSerializer):

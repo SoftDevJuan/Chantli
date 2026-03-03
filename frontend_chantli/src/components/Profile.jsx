@@ -201,22 +201,41 @@ const Profile = () => {
 
             {/* --- SECCIÓN ESTADO DE VERIFICACIÓN --- */}
             <div className="mb-8">
-                {user.es_anfitrion_verificado ? (
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-green-100 p-2 rounded-full">
+                {(user?.perfil?.es_anfitrion_verificado || user?.perfil?.es_huesped_verificado) ? (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-5 shadow-sm">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="bg-green-100 p-3 rounded-full flex-shrink-0">
                                 <ShieldCheck className="h-6 w-6 text-green-600" />
                             </div>
                             <div>
                                 <h3 className="font-bold text-green-800 text-sm">Identidad Verificada</h3>
-                                <p className="text-xs text-green-600">Tu cuenta está validada para publicar.</p>
+                                {/* Etiquetas para saber de qué está verificado */}
+                                <div className="flex flex-wrap gap-2 mt-1.5">
+                                    {user?.perfil?.es_anfitrion_verificado && (
+                                        <span className="bg-green-200 text-green-800 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                            ✓ Anfitrión
+                                        </span>
+                                    )}
+                                    {user?.perfil?.es_huesped_verificado && (
+                                        <span className="bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                            ✓ Huésped
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
+                        <button 
+                            type="button"
+                            onClick={() => navigate('/verification')} 
+                            className="w-full py-3 bg-white border border-green-200 text-green-700 font-bold text-xs rounded-xl hover:bg-green-100 transition flex items-center justify-center gap-2 shadow-sm"
+                        >
+                            Ver mis documentos <ChevronRight className="h-4 w-4" />
+                        </button>
                     </div>
                 ) : (
                     <div className="bg-orange-50 border border-orange-200 rounded-xl p-5 shadow-sm">
                         <div className="flex items-start gap-3 mb-4">
-                            <div className="bg-orange-100 p-2 rounded-full mt-1">
+                            <div className="bg-orange-100 p-2 rounded-full mt-1 flex-shrink-0">
                                 <ShieldAlert className="h-6 w-6 text-orange-600" />
                             </div>
                             <div>

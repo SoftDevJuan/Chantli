@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, ShieldCheck, FileText, AlertTriangle, CheckCircle, User, Briefcase, Home, Camera, Edit3, XCircle, ExternalLink, Eye } from 'lucide-react';
+import { Upload, ShieldCheck, FileText, AlertTriangle, CheckCircle, User, Briefcase, Home, Camera, Edit3, XCircle, ExternalLink, Eye, ArrowLeft, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -9,11 +9,9 @@ const VerificationProfile = () => {
   const [perfil, setPerfil] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  
-  // NUEVO: Estado para saber si mostramos el resumen o el formulario
   const [isEditing, setIsEditing] = useState(false);
+  const [showTerms, setShowTerms] = useState(false); // Modal de términos
   
-  // Formulario
   const [formData, setFormData] = useState({
       telefono: '',
       direccion: '',
@@ -47,13 +45,11 @@ const VerificationProfile = () => {
             acepto_terminos: data.acepto_terminos_y_reglamento || false
         });
 
-        // LÓGICA MÁGICA: Si ya subió su INE o Selfie, lo mandamos a la vista de "Resumen"
-        if (data.identificacion_frente || data.foto_selfie) {
+        if (data.identificacion_frente || data.foto_selfie || data.constancia_estudios_trabajo) {
             setIsEditing(false);
         } else {
-            setIsEditing(true); // Si está vacío, mostramos el formulario
+            setIsEditing(true); 
         }
-
         setLoading(false);
     } catch (err) {
         console.error(err);
@@ -89,8 +85,10 @@ const VerificationProfile = () => {
           if (files[key]) data.append(key, files[key]);
       });
 
-      // Bandera para que Django sepa que fue una edición manual y mande notificación
-      data.append('fue_editado', 'true');
+      // Si ya existía el perfil, marcamos como editado
+      if(perfil?.identificacion_frente) {
+          data.append('fue_editado', 'true');
+      }
 
       try {
           const res = await fetch(`${API_URL}/api/perfil/subir_documentos/`, {
@@ -100,11 +98,11 @@ const VerificationProfile = () => {
           });
           
           if (res.ok) {
-              alert("Documentos actualizados con éxito. Hemos notificado al equipo de validación.");
-              setFiles({}); // Limpiamos archivos temporales
-              cargarPerfil(); // Recarga y lo regresa a la vista de lectura automáticamente
+              alert("Documentos enviados con éxito.");
+              setFiles({}); 
+              cargarPerfil(); 
           } else {
-              alert("Error al subir documentos. Verifica el tamaño de los archivos.");
+              alert("Error al procesar los documentos. Verifica los tamaños.");
           }
       } catch (error) {
           alert("Error de conexión");
@@ -113,20 +111,14 @@ const VerificationProfile = () => {
       }
   };
 
-  // Función para Cancelar/Borrar la validación
   const handleCancelVerification = async () => {
-      if(!window.confirm("¿Estás seguro de que deseas cancelar tu proceso de validación? Esto borrará tus documentos enviados y perderás tus insignias de verificación.")) return;
+      if(!window.confirm("¿Seguro que deseas cancelar tu validación? Se borrarán tus documentos y perderás tus insignias.")) return;
 
       setUploading(true);
       const token = localStorage.getItem('chantli_token');
       
-      // Enviamos campos vacíos para resetear
       const data = new FormData();
-      data.append('telefono', '');
-      data.append('direccion', '');
-      data.append('rfc', '');
-      data.append('acepto_terminos_y_reglamento', 'false');
-      data.append('cancelar_validacion', 'true'); // Bandera para backend
+      data.append('cancelar_validacion', 'true'); 
 
       try {
           const res = await fetch(`${API_URL}/api/perfil/subir_documentos/`, {
@@ -136,7 +128,7 @@ const VerificationProfile = () => {
           });
           
           if (res.ok) {
-              alert("Tu proceso de validación ha sido cancelado y tus datos retirados de la revisión.");
+              alert("Validación cancelada correctamente.");
               cargarPerfil();
           }
       } catch (error) {
@@ -151,10 +143,18 @@ const VerificationProfile = () => {
       return path.startsWith('http') ? path : `${API_URL}${path}`;
   };
 
-  if (loading) return <div className="p-10 text-center text-gray-500 font-bold">Cargando perfil...</div>;
+  if (loading) return <div className="p-10 text-center font-bold text-brand-600 flex justify-center mt-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 pb-28">
+      
+      {/* Botón flotante para regresar al Perfil */}
+      <div className="max-w-3xl mx-auto mb-4">
+        <button onClick={() => navigate('/profile')} className="flex items-center text-gray-600 hover:text-brand-600 font-bold transition">
+            <ArrowLeft className="h-5 w-5 mr-1" /> Regresar al Perfil
+        </button>
+      </div>
+
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
         
         {/* Encabezado */}
@@ -170,7 +170,6 @@ const VerificationProfile = () => {
         {!isEditing ? (
             <div className="p-8 space-y-6 animate-fade-in">
                 
-                {/* Estatus Global */}
                 <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900">Estado de tu Solicitud</h2>
@@ -186,7 +185,6 @@ const VerificationProfile = () => {
                     </div>
                 </div>
 
-                {/* Resumen de Datos */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <p className="text-xs text-gray-400 font-bold uppercase mb-1">Teléfono</p>
@@ -198,24 +196,22 @@ const VerificationProfile = () => {
                     </div>
                 </div>
 
-                {/* Resumen de Documentos */}
                 <div>
                     <h3 className="text-sm font-bold text-gray-900 border-b pb-2 mb-4">Documentos Enviados</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <MiniDocViewer title="INE Frente" file={perfil?.identificacion_frente} getFileUrl={getFileUrl} />
                         <MiniDocViewer title="INE Reverso" file={perfil?.identificacion_reverso} getFileUrl={getFileUrl} />
                         <MiniDocViewer title="Selfie" file={perfil?.foto_selfie} getFileUrl={getFileUrl} />
-                        <MiniDocViewer title="Comprobante / PDF" file={perfil?.comprobante_domicilio_propiedad || perfil?.constancia_estudios_trabajo} getFileUrl={getFileUrl} isPdf={true} />
+                        <MiniDocViewer title="PDF Adicional" file={perfil?.comprobante_domicilio_propiedad || perfil?.constancia_estudios_trabajo} getFileUrl={getFileUrl} isPdf={true} />
                     </div>
                 </div>
 
-                {/* Botones de Acción */}
                 <div className="pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
                     <button 
                         onClick={() => setIsEditing(true)}
                         className="flex-1 flex justify-center items-center gap-2 bg-brand-50 text-brand-700 font-bold py-3 px-4 rounded-xl hover:bg-brand-100 transition"
                     >
-                        <Edit3 className="h-5 w-5" /> Editar Información
+                        <Edit3 className="h-5 w-5" /> Editar Documentación
                     </button>
                     <button 
                         onClick={handleCancelVerification}
@@ -229,18 +225,16 @@ const VerificationProfile = () => {
         ) : (
 
         /* ========================================================= */
-        /* VISTA 2: MODO EDICIÓN (EL FORMULARIO QUE YA TENÍAMOS)     */
+        /* VISTA 2: MODO EDICIÓN (FORMULARIO CON VISTAS PREVIAS)     */
         /* ========================================================= */
-        <form onSubmit={handleSubmit} className="p-8 space-y-8 animate-fade-in">
+        <form onSubmit={handleSubmit} className="p-8 space-y-8 animate-fade-in relative">
             
-            {/* Si ya tenía datos y está editando, mostramos un botón para regresar */}
-            {(perfil?.identificacion_frente || perfil?.foto_selfie) && (
-                <button type="button" onClick={() => setIsEditing(false)} className="text-brand-600 text-sm font-bold flex items-center hover:underline mb-4">
-                    &larr; Volver al resumen
+            {(perfil?.identificacion_frente || perfil?.foto_selfie || perfil?.constancia_estudios_trabajo) && (
+                <button type="button" onClick={() => setIsEditing(false)} className="absolute top-4 right-8 bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition">
+                    <X className="h-5 w-5 text-gray-600" />
                 </button>
             )}
 
-            {/* --- SECCIÓN DATOS PERSONALES --- */}
             <section>
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4 border-b pb-2">
                     <User className="h-5 w-5 text-brand-600" /> Datos y Biometría
@@ -257,58 +251,61 @@ const VerificationProfile = () => {
                 </div>
                 
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-5 text-center hover:bg-gray-50 transition">
-                        <Camera className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm font-bold text-gray-700 mb-1">Identificación (Frente)</p>
-                        <p className="text-[10px] text-gray-500 mb-3">Toma una foto clara y sin reflejos</p>
-                        <input type="file" name="identificacion_frente" onChange={handleFileChange} className="text-xs w-full" accept="image/*" capture="environment" />
-                        {perfil?.identificacion_frente && <p className="text-xs text-green-600 mt-2 font-bold">✓ Archivo actual guardado</p>}
-                    </div>
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-5 text-center hover:bg-gray-50 transition">
-                        <Camera className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm font-bold text-gray-700 mb-1">Identificación (Reverso)</p>
-                        <p className="text-[10px] text-gray-500 mb-3">Asegúrate de que el texto sea legible</p>
-                        <input type="file" name="identificacion_reverso" onChange={handleFileChange} className="text-xs w-full" accept="image/*" capture="environment" />
-                        {perfil?.identificacion_reverso && <p className="text-xs text-green-600 mt-2 font-bold">✓ Archivo actual guardado</p>}
-                    </div>
+                    <FileUploader 
+                        title="Identificación (Frente)" 
+                        name="identificacion_frente" 
+                        fileUrl={getFileUrl(perfil?.identificacion_frente)} 
+                        onChange={handleFileChange} 
+                        newFile={files.identificacion_frente} 
+                        accept="image/*" capture="environment" 
+                    />
+                    <FileUploader 
+                        title="Identificación (Reverso)" 
+                        name="identificacion_reverso" 
+                        fileUrl={getFileUrl(perfil?.identificacion_reverso)} 
+                        onChange={handleFileChange} 
+                        newFile={files.identificacion_reverso} 
+                        accept="image/*" capture="environment" 
+                    />
                 </div>
 
-                <div className="mt-4 border-2 border-dashed border-brand-200 bg-brand-50 rounded-xl p-5 text-center">
-                    <div className="h-12 w-12 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <User className="h-6 w-6 text-brand-600" />
-                    </div>
-                    <p className="text-sm font-bold text-brand-900 mb-1">Prueba de Vida (Selfie)</p>
-                    <p className="text-xs text-brand-700 mb-4 max-w-md mx-auto">Tómate una foto ahora mismo.</p>
-                    <input type="file" name="foto_selfie" onChange={handleFileChange} className="text-xs w-full max-w-xs mx-auto block" accept="image/*" capture="user" />
-                    {perfil?.foto_selfie && <p className="text-xs text-green-600 mt-2 font-bold">✓ Selfie actual guardada</p>}
+                <div className="mt-4">
+                    <FileUploader 
+                        title="Prueba de Vida (Selfie)" 
+                        name="foto_selfie" 
+                        fileUrl={getFileUrl(perfil?.foto_selfie)} 
+                        onChange={handleFileChange} 
+                        newFile={files.foto_selfie} 
+                        accept="image/*" capture="user"
+                        isSelfie={true}
+                    />
                 </div>
             </section>
 
-            {/* --- SECCIÓN ANFITRIÓN --- */}
             <section className="bg-blue-50 p-5 rounded-xl border border-blue-100">
                 <h3 className="text-lg font-bold text-blue-900 flex items-center gap-2 mb-4">
                     <Home className="h-5 w-5" /> Quiero Publicar Propiedades (Anfitrión)
                 </h3>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input 
                         type="text" placeholder="RFC (Registro SAT)" className="input-field border p-3 rounded-lg w-full"
                         value={formData.rfc} onChange={e => setFormData({...formData, rfc: e.target.value})}
                     />
-                     <div className="border border-dashed border-blue-300 bg-white rounded-lg p-4 text-center">
-                        <p className="text-sm font-bold text-gray-500 mb-2">Comprobante Domicilio / Propiedad</p>
-                        <input type="file" name="comprobante_domicilio_propiedad" onChange={handleFileChange} className="text-xs" accept=".pdf,image/*" />
-                        {perfil?.comprobante_domicilio_propiedad && <p className="text-xs text-green-600 mt-2 font-bold">✓ Archivo guardado</p>}
-                    </div>
+                     <FileUploader 
+                        title="Comprobante Domicilio / Propiedad" 
+                        name="comprobante_domicilio_propiedad" 
+                        fileUrl={getFileUrl(perfil?.comprobante_domicilio_propiedad)} 
+                        onChange={handleFileChange} 
+                        newFile={files.comprobante_domicilio_propiedad} 
+                        accept=".pdf,image/*" 
+                    />
                 </div>
             </section>
 
-            {/* --- SECCIÓN HUÉSPED --- */}
             <section className="bg-green-50 p-5 rounded-xl border border-green-100">
                 <h3 className="text-lg font-bold text-green-900 flex items-center gap-2 mb-4">
                     <Briefcase className="h-5 w-5" /> Validación de Huésped
                 </h3>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <input 
                         type="text" placeholder="Nombre Referencia Personal" className="input-field border p-3 rounded-lg w-full"
@@ -319,40 +316,72 @@ const VerificationProfile = () => {
                         value={formData.referencia_telefono} onChange={e => setFormData({...formData, referencia_telefono: e.target.value})}
                     />
                 </div>
-                <div className="border border-dashed border-green-300 bg-white rounded-lg p-4 text-center">
-                    <p className="text-sm font-bold text-gray-500 mb-2">Constancia de Estudios o Trabajo (PDF)</p>
-                    <input type="file" name="constancia_estudios_trabajo" onChange={handleFileChange} className="text-xs" accept=".pdf,image/*" />
-                    {perfil?.constancia_estudios_trabajo && <p className="text-xs text-green-600 mt-2 font-bold">✓ Archivo guardado</p>}
-                </div>
+                <FileUploader 
+                    title="Constancia de Estudios o Trabajo" 
+                    name="constancia_estudios_trabajo" 
+                    fileUrl={getFileUrl(perfil?.constancia_estudios_trabajo)} 
+                    onChange={handleFileChange} 
+                    newFile={files.constancia_estudios_trabajo} 
+                    accept=".pdf,image/*" 
+                />
             </section>
 
-            <label className="flex items-center gap-3 cursor-pointer">
+            <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <input 
                     type="checkbox" 
                     checked={formData.acepto_terminos}
                     onChange={e => setFormData({...formData, acepto_terminos: e.target.checked})}
-                    className="h-5 w-5 text-brand-600 rounded focus:ring-brand-500"
+                    className="h-5 w-5 mt-1 text-brand-600 rounded focus:ring-brand-500 cursor-pointer"
                 />
-                <span className="text-sm font-bold text-gray-800">He leído y acepto el Reglamento y Aviso de Privacidad.</span>
-            </label>
+                <div>
+                    <span className="text-sm font-bold text-gray-800 cursor-pointer" onClick={() => setFormData({...formData, acepto_terminos: !formData.acepto_terminos})}>
+                        He leído y acepto los términos legales.
+                    </span>
+                    <p className="text-xs text-brand-600 font-bold hover:underline cursor-pointer mt-1" onClick={() => setShowTerms(true)}>
+                        Ver Términos, Condiciones y Aviso de Privacidad
+                    </p>
+                </div>
+            </div>
 
             <button 
                 type="submit" 
                 disabled={uploading}
-                className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl hover:bg-black transition shadow-lg disabled:opacity-50"
+                className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl hover:bg-black transition shadow-lg disabled:opacity-50 flex justify-center items-center gap-2"
             >
-                {uploading ? 'Guardando cambios...' : 'Guardar y Enviar a Revisión'}
+                {uploading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <Upload className="h-5 w-5" />}
+                {uploading ? 'Guardando...' : 'Guardar y Enviar a Revisión'}
             </button>
 
         </form>
         )}
       </div>
+
+      {/* MODAL LEGAL */}
+      {showTerms && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl animate-fade-in">
+                <div className="p-4 border-b flex justify-between items-center">
+                    <h2 className="font-bold text-lg text-gray-900">Términos y Aviso de Privacidad</h2>
+                    <button onClick={() => setShowTerms(false)} className="text-gray-400 hover:text-red-500"><XCircle className="h-6 w-6" /></button>
+                </div>
+                <div className="p-6 overflow-y-auto flex-1 text-sm text-gray-600 space-y-4">
+                    <p><strong>1. Uso de Datos:</strong> Tus documentos son encriptados y utilizados exclusivamente para validar tu identidad dentro de la plataforma Chantli, garantizando la seguridad de la comunidad.</p>
+                    <p><strong>2. Almacenamiento:</strong> No compartimos tus datos biométricos ni identificaciones con terceros ajenos al proceso de validación. Al cancelar tu validación, tus archivos físicos son destruidos de nuestros servidores permanentemente.</p>
+                    <p><strong>3. Responsabilidad:</strong> Proporcionar documentos falsos o alterados resultará en la suspensión permanente de tu cuenta y posibles reportes a las autoridades correspondientes.</p>
+                    <p><strong>4. Consentimiento:</strong> Al marcar la casilla de aceptación, otorgas tu consentimiento expreso para el tratamiento de tus datos personales bajo los lineamientos de la Ley Federal de Protección de Datos Personales en Posesión de los Particulares.</p>
+                </div>
+                <div className="p-4 border-t bg-gray-50 text-right">
+                    <button onClick={() => setShowTerms(false)} className="px-6 py-2 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700">Entendido</button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
 
-// Componente pequeño para renderizar los documentos en la vista de resumen
-const MiniDocViewer = ({ title, file, getFileUrl }) => {
+// Componente para la Vista Previa del Documento
+const MiniDocViewer = ({ title, file, getFileUrl, isPdf }) => {
     if (!file) return (
         <div className="bg-gray-50 border border-dashed border-gray-200 rounded-lg h-24 flex flex-col items-center justify-center text-gray-400">
             <span className="text-[10px] font-bold text-center px-2">{title}</span>
@@ -360,12 +389,12 @@ const MiniDocViewer = ({ title, file, getFileUrl }) => {
         </div>
     );
 
-    const isPdf = file.toLowerCase().endsWith('.pdf');
     const fullUrl = getFileUrl(file);
+    const renderPdf = isPdf || file.toLowerCase().endsWith('.pdf');
 
     return (
         <a href={fullUrl} target="_blank" rel="noreferrer" className="group relative bg-gray-100 border border-gray-200 rounded-lg h-24 overflow-hidden block hover:shadow-md transition">
-            {isPdf ? (
+            {renderPdf ? (
                 <div className="w-full h-full flex flex-col items-center justify-center text-red-500 bg-red-50">
                     <FileText className="h-6 w-6 mb-1" />
                     <span className="text-[10px] font-bold">PDF</span>
@@ -383,7 +412,43 @@ const MiniDocViewer = ({ title, file, getFileUrl }) => {
     );
 };
 
-// Icono auxiliar
+// Componente Inteligente para Subir Archivos (Muestra el actual, permite cambiarlo)
+const FileUploader = ({ title, name, fileUrl, onChange, newFile, accept, capture, isSelfie }) => {
+    const isPdf = fileUrl && fileUrl.toLowerCase().endsWith('.pdf');
+
+    return (
+        <div className={`relative border-2 border-dashed ${fileUrl || newFile ? 'border-brand-300 bg-brand-50' : 'border-gray-300 hover:bg-gray-50'} rounded-xl p-4 text-center transition flex flex-col justify-center`}>
+            
+            {/* Si ya hay un archivo subido, mostramos una mini vista previa arriba */}
+            {fileUrl && !newFile && (
+                <div className="absolute top-2 right-2 flex items-center gap-1 bg-white px-2 py-1 rounded shadow-sm border border-gray-200">
+                    <span className="text-[10px] font-bold text-green-600">Actual ✓</span>
+                    <a href={fileUrl} target="_blank" rel="noreferrer" className="text-brand-600 hover:text-brand-800"><Eye className="h-3 w-3" /></a>
+                </div>
+            )}
+
+            {!fileUrl && !newFile && <Camera className={`h-8 w-8 mx-auto text-gray-400 mb-2 ${isSelfie && 'text-brand-400'}`} />}
+            
+            <p className={`text-sm font-bold mb-1 ${isSelfie ? 'text-brand-900' : 'text-gray-700'}`}>{title}</p>
+            
+            {newFile ? (
+                <p className="text-xs text-brand-600 font-bold mt-2">Nuevo archivo seleccionado listo para guardar.</p>
+            ) : (
+                <p className="text-[10px] text-gray-500 mb-3">{fileUrl ? 'Sube un archivo para reemplazarlo' : 'Toma una foto clara'}</p>
+            )}
+            
+            <input 
+                type="file" 
+                name={name} 
+                onChange={onChange} 
+                className="text-xs w-full max-w-[200px] mx-auto cursor-pointer file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-brand-100 file:text-brand-700 hover:file:bg-brand-200" 
+                accept={accept} 
+                capture={capture} 
+            />
+        </div>
+    );
+};
+
 const ClockIcon = (props) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
 );

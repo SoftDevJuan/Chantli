@@ -7,10 +7,14 @@ const API_URL = import.meta.env.VITE_API_URL;
 const Checkout = () => {
   const { state } = useLocation(); 
   const navigate = useNavigate();
+  
   const [verificando, setVerificando] = useState(true);
   const [yaPagada, setYaPagada] = useState(false);      
   const [tarjetas, setTarjetas] = useState([]);
   const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState('');
+  
+  // NUEVO: Estado para guardar la información del usuario
+  const [currentUser, setCurrentUser] = useState(null);
   
   const [modalState, setModalState] = useState({ type: null, title: '', message: '' });
 
@@ -24,13 +28,11 @@ const Checkout = () => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        // 1. Si hay un modal abierto (y no está cargando), cierra el modal
         if (modalState.type !== 'loading' && modalState.type !== null) {
           setModalState({ type: null, title: '', message: '' });
         } 
-        // 2. Si NO hay modal abierto, salimos de la página de Checkout
         else if (modalState.type === null) {
-          navigate(-1); // Regresa a la página anterior
+          navigate(-1);
         }
       }
     };
@@ -47,14 +49,18 @@ const Checkout = () => {
 
     const initData = async () => {
         try {
+            // Añadimos la llamada para obtener el usuario actual
+            const reqUser = fetch(`${API_URL}/api/me/`, { headers });
             const reqTarjetas = fetch(`${API_URL}/api/tarjetas/`, { headers });
             const reqReserva = fetch(`${API_URL}/api/reservas/${state.reservaId}/`, { headers });
 
-            const [resTarjetas, resReserva] = await Promise.all([reqTarjetas, reqReserva]);
+            const [resUser, resTarjetas, resReserva] = await Promise.all([reqUser, reqTarjetas, reqReserva]);
             
+            const dataUser = await resUser.json();
             const dataTarjetas = await resTarjetas.json();
             const dataReserva = await resReserva.json();
 
+            setCurrentUser(dataUser);
             setTarjetas(dataTarjetas);
             if(dataTarjetas.length > 0) setTarjetaSeleccionada(dataTarjetas[0].id);
 
@@ -127,9 +133,16 @@ const Checkout = () => {
 
   if (!state) return <div className="p-10 text-center text-red-500">Información no disponible.</div>;
 
+  // ========================================================
+  // LÓGICA DE PRECIOS ACTUALIZADA CON VALIDACIÓN DE HUÉSPED
+  // ========================================================
   const precioMensual = parseFloat(state.precio);
   const impuesto = precioMensual * 0.16;
-  const deposito = precioMensual;
+  
+  // Evaluamos si debe pagar depósito
+  const isVerifiedGuest = currentUser?.perfil?.es_huesped_verificado === true;
+  const deposito = isVerifiedGuest ? 0 : precioMensual;
+  
   const total = precioMensual + impuesto + deposito;
   const tarjetaActual = tarjetas.find(t => t.id == tarjetaSeleccionada);
 
@@ -208,7 +221,6 @@ const Checkout = () => {
        {/* --- PANTALLA PRINCIPAL DE CHECKOUT --- */}
        <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-8 relative overflow-hidden">
           
-          {/* NUEVO BOTÓN PARA CANCELAR/SALIR DEL CHECKOUT */}
           <button 
               onClick={() => navigate(-1)} 
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition"
@@ -217,7 +229,6 @@ const Checkout = () => {
               <XCircle className="h-7 w-7" />
           </button>
 
-          {/* CUBIERTA DE CARGA O BLOQUEO SI YA ESTÁ PAGADA */}
           {(verificando || yaPagada) && (
               <div className="absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-center p-6 backdrop-blur-sm">
                   {verificando ? (
@@ -251,9 +262,17 @@ const Checkout = () => {
                     <span>IVA (16%)</span>
                     <span>${impuesto.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                 </div>
-                <div className="flex justify-between text-brand-600 font-medium border-b border-gray-200 pb-2">
+                
+                {/* --- UI DEL DEPÓSITO CONDICIONAL --- */}
+                <div className="flex justify-between text-brand-600 font-medium border-b border-gray-200 pb-2 items-center">
                     <span>Depósito en Garantía</span>
-                    <span>${deposito.toLocaleString()}</span>
+                    {deposito === 0 ? (
+                        <div className="flex items-center text-green-600 font-bold bg-green-100 px-2 py-0.5 rounded-md text-xs">
+                            <ShieldCheck className="h-3 w-3 mr-1" /> Exento
+                        </div>
+                    ) : (
+                        <span>${deposito.toLocaleString()}</span>
+                    )}
                 </div>
              </div>
 

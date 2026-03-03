@@ -171,7 +171,13 @@ const HistorialRentas = () => {
 
                         {reservaActiva.estado === 'esperando_pago' && (
                             <button 
-                                onClick={() => navigate('/checkout')} 
+                                onClick={() => navigate('/checkout', { 
+                                    state: { 
+                                        reservaId: reservaActiva.id, 
+                                        titulo: reservaActiva.propiedad_titulo, 
+                                        precio: reservaActiva.propiedad_precio 
+                                    } 
+                                })} 
                                 className="w-full mt-5 bg-brand-600 text-white font-bold py-3 rounded-xl hover:bg-brand-700 transition shadow-md"
                             >
                                 Proceder al Pago
@@ -196,11 +202,21 @@ const HistorialRentas = () => {
     // ==========================================
     return (
         <div className="min-h-screen bg-gray-50 pb-24">
-            <div className="bg-white sticky top-0 z-30 px-4 py-4 shadow-sm flex items-center gap-4">
-                <button onClick={() => navigate('/home')} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition">
-                    <ArrowLeft className="h-5 w-5 text-gray-700" />
+            {/* --- HEADER MODIFICADO CON ICONO DE RECIBOS --- */}
+            <div className="bg-white sticky top-0 z-30 px-4 py-4 shadow-sm flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate('/home')} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition">
+                        <ArrowLeft className="h-5 w-5 text-gray-700" />
+                    </button>
+                    <h1 className="text-xl font-bold text-gray-900">Mi Historial</h1>
+                </div>
+                <button 
+                    onClick={() => navigate('/invoices')}
+                    className="p-2 bg-brand-50 text-brand-700 rounded-full hover:bg-brand-100 transition shadow-sm flex items-center justify-center"
+                    title="Ver Historial de Recibos"
+                >
+                    <FileText className="h-5 w-5" />
                 </button>
-                <h1 className="text-xl font-bold text-gray-900">Mi Historial de Rentas</h1>
             </div>
 
             <div className="max-w-3xl mx-auto px-4 mt-6">

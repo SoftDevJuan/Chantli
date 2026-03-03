@@ -580,9 +580,16 @@ class PerfilUsuarioViewSet(viewsets.ModelViewSet):
         obj, created = PerfilUsuario.objects.get_or_create(usuario=self.request.user)
         return obj
 
-    @action(detail=False, methods=['patch'], parser_classes=[MultiPartParser, FormParser])
+    @action(detail=False, methods=['get', 'patch'], parser_classes=[MultiPartParser, FormParser])
     def subir_documentos(self, request):
         perfil = self.get_object()
+
+        # ==================================================
+        # 0. LÓGICA DE LECTURA (Para que React sepa qué mostrar)
+        # ==================================================
+        if request.method == 'GET':
+            serializer = self.get_serializer(perfil)
+            return Response(serializer.data)
 
         # ==================================================
         # 1. LÓGICA DE CANCELACIÓN DE VALIDACIÓN
@@ -599,7 +606,7 @@ class PerfilUsuarioViewSet(viewsets.ModelViewSet):
             perfil.es_huesped_verificado = False
             perfil.es_anfitrion_verificado = False
             perfil.acepto_terminos_y_reglamento = False
-            perfil.requiere_deposito_garantia = True # Vuelve a requerir depósito
+            perfil.requiere_deposito_garantia = True
             
             perfil.save()
             return Response({"status": "Validación cancelada y documentos eliminados"}, status=status.HTTP_200_OK)
@@ -615,28 +622,27 @@ class PerfilUsuarioViewSet(viewsets.ModelViewSet):
                 perfil.requiere_deposito_garantia = False
                 perfil.save()
 
-            # ==================================================
-            # 3. NOTIFICACIONES AL EDITAR
-            # ==================================================
+            # Notificaciones
             if request.data.get('fue_editado') == 'true':
-                
-                # A) WebPush al Usuario
+                Notificacion.objects.create(
+                    usuario=request.user,
+                    mensaje="Tus documentos de verificación han sido actualizados y enviados a revisión."
+                )
                 try:
-                    payload_user = {"head": "Validación en proceso", "body": "Tus documentos han sido actualizados y enviados a revisión."}
-                    send_user_notification(user=request.user, payload=payload_user, ttl=1000)
-                except Exception as e:
-                    print("Error enviando push al usuario:", e)
+                    send_user_notification(user=request.user, payload={"head": "Validación", "body": "Documentos enviados a revisión."}, ttl=1000)
+                except Exception:
+                    pass
 
-                # B) WebPush a los Administradores
                 admins = User.objects.filter(is_staff=True)
                 for admin in admins:
+                    Notificacion.objects.create(
+                        usuario=admin,
+                        mensaje=f"@{request.user.username} ha subido/actualizado sus documentos."
+                    )
                     try:
-                        payload_admin = {"head": "Nueva Validación Pendiente", "body": f"@{request.user.username} ha subido/actualizado sus documentos."}
-                        send_user_notification(user=admin, payload=payload_admin, ttl=1000)
-                    except Exception as e:
+                        send_user_notification(user=admin, payload={"head": "Nueva Validación", "body": f"@{request.user.username} subió documentos."}, ttl=1000)
+                    except Exception:
                         pass
-                
-                # NOTA: Si creas un modelo 'Notificacion' en base de datos para la "campanita", créalas aquí también.
 
             return Response(serializer.data)
         

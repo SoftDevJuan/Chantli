@@ -17,6 +17,7 @@ import VerificationProfile from './components/VerificationProfile';
 import AdminVerifications from './components/AdminVerifications';
 import Favorites from './components/Favorites';
 import HistorialRentas from './components/HistorialRentas';
+import EditProperty from './components/EditProperty';
 
 
 
@@ -42,6 +43,7 @@ function App() {
         <Route path="/admin-panel" element={<AdminVerifications />} />   
         <Route path="/favorites" element={<Favorites />} />   
         <Route path="/historial-rentas" element={<HistorialRentas />} />
+        <Route path="/edit-property/:id" element={<EditProperty />} />
       </Routes>
     </BrowserRouter>
   );

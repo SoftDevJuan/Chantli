@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, Send, ChevronRight, Home } from 'lucide-react';
+import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, Send, ChevronRight, Home, ShieldCheck } from 'lucide-react';
 
 // --- IMPORTACIONES MAPA GOOGLE ---
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
@@ -29,6 +29,7 @@ const PropertyDetail = () => {
 
   // Estados de UI
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false); // <--- NUEVO ESTADO PARA EL MODAL DE ÉXITO
   
   // Estados del Calendario
   const [startDate, setStartDate] = useState(null);
@@ -106,23 +107,30 @@ const PropertyDetail = () => {
       .catch(err => console.error(err));
   }, [id]);
 
+  // ========================================================
+  // LÓGICA FINANCIERA ACTUALIZADA (CON VALIDACIÓN DE HUÉSPED)
+  // ========================================================
   useEffect(() => {
     if (!startDate || !endDate || !propiedad) return;
     if (startDate >= endDate) {
         setCalculo(prev => ({ ...prev, error: 'La fecha de salida debe ser después de la llegada.', total: 0 }));
         return;
     }
+    
     const diffTime = Math.abs(endDate - startDate);
     const dias = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
     const precioMensual = parseFloat(propiedad.precio);
     const precioDiario = precioMensual / 30;
     const rentaCalculada = precioDiario * dias;
     const impuesto = rentaCalculada * 0.16;
-    const deposito = precioMensual;
+    
+    const isVerifiedGuest = currentUser?.perfil?.es_huesped_verificado === true;
+    const deposito = isVerifiedGuest ? 0 : precioMensual;
+    
     const totalFinal = rentaCalculada + impuesto + deposito;
 
     setCalculo({ dias, renta: rentaCalculada, iva: impuesto, deposito, total: totalFinal, error: '' });
-  }, [startDate, endDate, propiedad]);
+  }, [startDate, endDate, propiedad, currentUser]); 
 
   const handleToggleFavorite = async () => {
       if (!currentUser) {
@@ -132,7 +140,7 @@ const PropertyDetail = () => {
       if (favLoading) return;
       
       setFavLoading(true);
-      setIsFavorite(!isFavorite); // Optimistic update
+      setIsFavorite(!isFavorite);
 
       const token = localStorage.getItem('chantli_token');
       try {
@@ -146,7 +154,7 @@ const PropertyDetail = () => {
           });
 
           if (!res.ok) {
-              setIsFavorite(isFavorite); // Revertir si hay error
+              setIsFavorite(isFavorite);
               alert("Error al actualizar favoritos.");
           }
       } catch (error) {
@@ -157,6 +165,9 @@ const PropertyDetail = () => {
       }
   };
 
+  // ========================================================
+  // SOLICITUD DE RESERVA CON FLUJO ACTUALIZADO
+  // ========================================================
   const handleReserva = async (e) => {
     e.preventDefault();
     if (calculo.error || calculo.total === 0) return;
@@ -177,11 +188,11 @@ const PropertyDetail = () => {
             })
         });
         if (response.ok) {
-            const data = await response.json();
-            navigate('/checkout', { state: { reservaId: data.id, titulo: propiedad.titulo, precio: calculo.renta } });
+            // Cerramos el formulario y abrimos el Modal de Éxito
             setIsModalOpen(false);
+            setShowSuccessModal(true);
         } else {
-            alert("Error al reservar.");
+            alert("Error al solicitar la reserva.");
         }
     } catch (error) {
         alert("Error de conexión");
@@ -486,7 +497,7 @@ const PropertyDetail = () => {
         </div>
       </div>
 
-      {/* MODAL RESERVA */}
+      {/* MODAL RESERVA (FORMULARIO DE FECHAS) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
@@ -511,13 +522,25 @@ const PropertyDetail = () => {
                             <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2 mt-4 animate-fade-in">
                                 <div className="flex justify-between text-xs text-gray-600"><span>Renta ({calculo.dias} días)</span><span>${calculo.renta.toLocaleString()}</span></div>
                                 <div className="flex justify-between text-xs text-gray-600"><span>IVA (16%)</span><span>${calculo.iva.toLocaleString()}</span></div>
-                                <div className="flex justify-between text-xs text-gray-600"><span>Depósito</span><span>${calculo.deposito.toLocaleString()}</span></div>
+                                
+                                {/* UI DEL DEPÓSITO CONDICIONAL */}
+                                <div className="flex justify-between text-xs items-center">
+                                    <span className="text-gray-600">Depósito de Garantía</span>
+                                    {calculo.deposito === 0 ? (
+                                        <div className="flex items-center text-green-600 font-bold bg-green-100 px-2 py-0.5 rounded-md">
+                                            <ShieldCheck className="h-3 w-3 mr-1" /> Exento por Verificación
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-600">${calculo.deposito.toLocaleString()}</span>
+                                    )}
+                                </div>
+
                                 <div className="border-t border-gray-200 pt-2 flex justify-between items-center"><span className="font-bold text-brand-900 text-sm">Total</span><span className="font-bold text-brand-700 text-lg">${calculo.total.toLocaleString()}</span></div>
                             </div>
                         )}
                         <div className="pt-4">
                             <button type="submit" disabled={bookingLoading || !!calculo.error || calculo.total === 0} className="w-full bg-brand-600 text-white font-bold py-4 rounded-xl hover:bg-brand-700 transition disabled:opacity-50 shadow-lg">
-                                {bookingLoading ? 'Procesando...' : (calculo.total > 0 ? `Reservar por $${calculo.total.toLocaleString(undefined, {maximumFractionDigits: 0})}` : 'Selecciona fechas')}
+                                {bookingLoading ? 'Enviando solicitud...' : (calculo.total > 0 ? `Enviar Solicitud al Anfitrión` : 'Selecciona fechas')}
                             </button>
                         </div>
                     </form>
@@ -525,6 +548,43 @@ const PropertyDetail = () => {
             </div>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* MODAL DE ÉXITO (EN ESPERA DE APROBACIÓN)                   */}
+      {/* ======================================================== */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center relative z-10 shadow-2xl animate-fade-in">
+                
+                <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-50 mb-6 border-4 border-green-100">
+                    <CheckCircle className="h-10 w-10 text-green-500" />
+                </div>
+                
+                <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¡Solicitud Enviada!</h2>
+                
+                <div className="bg-orange-50 text-orange-800 text-xs p-3 rounded-lg flex items-start text-left mb-6 border border-orange-100">
+                    <Clock className="h-5 w-5 mr-2 flex-shrink-0 text-orange-500" />
+                    <p>El anfitrión revisará tus fechas. <strong>No se ha realizado ningún cobro aún.</strong></p>
+                </div>
+
+                <p className="text-gray-600 text-sm mb-8 leading-relaxed">
+                    Te enviaremos una notificación en cuanto el anfitrión acepte tu solicitud para que puedas proceder al pago de forma segura.
+                </p>
+
+                <button 
+                    onClick={() => {
+                        setShowSuccessModal(false);
+                        navigate('/historial-rentas'); // Lo llevamos al historial al dar clic
+                    }} 
+                    className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl hover:bg-black transition active:scale-95 shadow-md"
+                >
+                    Entendido, ir a mis rentas
+                </button>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 };
