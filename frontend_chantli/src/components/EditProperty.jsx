@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, UploadCloud, MapPin, Type, X, Check, Wifi, Tv, Coffee, Car, Wind, Search, Loader2 } from 'lucide-react';
+import { ArrowLeft, UploadCloud, MapPin, Type, X, Check, Wifi, Tv, Coffee, Car, Wind, Search, Loader2, Home as HomeIcon, } from 'lucide-react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -244,6 +244,16 @@ const EditProperty = () => {
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100">
           <ArrowLeft className="h-6 w-6 text-gray-700" />
         </button>
+        <div 
+                onClick={() => navigate('/home')} 
+                className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition"
+                title="Ir a Inicio"
+            >
+                <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
+                <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                    Chantli
+                </span>
+            </div>
         <h1 className="ml-2 text-lg font-bold text-gray-900">Editar Propiedad</h1>
       </div>
 

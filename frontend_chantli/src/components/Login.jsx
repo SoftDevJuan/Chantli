@@ -98,9 +98,9 @@ const Login = () => {
         {/* --- LOGO Y TÍTULO --- */}
         <div className="sm:mx-auto sm:w-full sm:max-w-sm text-center mb-10">
             <div className="mx-auto h-20 w-20 bg-brand-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 transition-transform hover:rotate-0">
-                <Home className="text-gray-800 h-10 w-10" />
+                <Home className="text-gray-300 h-10 w-10" />
             </div>
-            <h2 className="mt-6 text-3xl font-extrabold text-brand-900 tracking-tight">
+            <h2 className="font-logo text-lg tracking-[0.30em] text-gray-900 group-hover:text-brand-900 transition uppercase pt-5">
             Chantli
             </h2>
             <p className="mt-2 text-sm text-gray-600">

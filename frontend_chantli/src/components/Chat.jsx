@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, ArrowLeft, Home } from 'lucide-react';
+import { Send, ArrowLeft, Home as HomeIcon } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -89,12 +89,16 @@ const Chat = () => {
         <button onClick={() => navigate(-1)} className="mr-3 p-2 rounded-full hover:bg-gray-100">
             <ArrowLeft className="h-6 w-6 text-gray-700" />
         </button>
-        <button 
-            onClick={() => navigate('/home')} 
-            className="p-2 rounded-full hover:bg-brand-50 transition text-brand-600 mr-3"
-            title="Ir al Inicio">
-            <Home className="h-6 w-6" />
-        </button>
+        <div 
+                        onClick={() => navigate('/home')} 
+                        className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition"
+                        title="Ir a Inicio"
+                    >
+                        <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
+                        <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                            Chantli
+                        </span>
+                    </div>
         
         {otroUsuario ? (
             <div 

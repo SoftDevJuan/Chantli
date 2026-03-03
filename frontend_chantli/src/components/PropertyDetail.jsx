@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, Send, ChevronRight, ChevronLeft, ShieldCheck, Image as ImageIcon, Search, Filter } from 'lucide-react';
+import { ArrowLeft, MapPin, CheckCircle, Share2, Star, MessageCircle, Heart, X, AlertCircle, Clock, Send, ChevronRight, ChevronLeft, ShieldCheck, Image as ImageIcon, Search, Filter, Home as HomeIcon, } from 'lucide-react';
 
 // --- IMPORTACIONES MAPA GOOGLE ---
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
@@ -275,15 +275,16 @@ const PropertyDetail = () => {
                 >
                     <ArrowLeft className="h-5 w-5 text-gray-700" />
                 </button>
-                <div className="h-5 w-px bg-gray-200 mx-1"></div>
                 <div 
-                    onClick={() => navigate('/home')} 
-                    className="flex items-center justify-center px-2 pr-3 cursor-pointer hover:opacity-80 transition"
-                    title="Ir a Inicio"
-                >
-                    {/* AQUÍ VA LA IMAGEN DEL LOGO */}
-                    <img src="/logo-chantli.png" alt="Chantli" className="h-6 object-contain" onError={(e) => { e.target.onerror = null; e.target.outerHTML = '<span class="font-extrabold text-lg text-brand-600 tracking-tighter">Chantli</span>'; }} />
-                </div>
+                onClick={() => navigate('/home')} 
+                className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition"
+                title="Ir a Inicio"
+            >
+                <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
+                <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                    Chantli
+                </span>
+            </div>
             </div>
         </div>
 

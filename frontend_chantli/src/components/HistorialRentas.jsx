@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     ArrowLeft, Calendar, MapPin, DollarSign, 
-    CheckCircle, Clock, XCircle, Home, User, FileText 
+    CheckCircle, Clock, XCircle, Home as HomeIcon, User, FileText 
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -85,6 +85,16 @@ const HistorialRentas = () => {
                     <button onClick={() => setReservaActiva(null)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition">
                         <ArrowLeft className="h-5 w-5 text-gray-700" />
                     </button>
+                    <div 
+                onClick={() => navigate('/home')} 
+                className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition"
+                title="Ir a Inicio"
+            >
+                <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
+                <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                    Chantli
+                </span>
+            </div>
                     <h1 className="text-xl font-bold text-gray-900">Detalles de tu renta</h1>
                 </div>
 
@@ -208,6 +218,16 @@ const HistorialRentas = () => {
                     <button onClick={() => navigate('/home')} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition">
                         <ArrowLeft className="h-5 w-5 text-gray-700" />
                     </button>
+                    <div 
+                onClick={() => navigate('/home')} 
+                className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition"
+                title="Ir a Inicio"
+            >
+                <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
+                <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                    Chantli
+                </span>
+            </div>
                     <h1 className="text-xl font-bold text-gray-900">Mi Historial</h1>
                 </div>
                 <button 

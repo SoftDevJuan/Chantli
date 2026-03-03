@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom'; // <-- Asegúrate de tener useLocation aquí
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
     MapPin, Search, Home as HomeIcon, Heart, MessageSquare, 
     LogOut, Filter, Plus, User, LayoutDashboard, Bell, ShieldCheck, Loader2 
@@ -55,7 +55,7 @@ const subscribeToPush = async (token) => {
 
 const Home = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // <--- ESTO FALTABA: Inicializar location
+  const location = useLocation(); 
   
   // --- ESTADOS DE ROLES ---
   const [isHost, setIsHost] = useState(false);
@@ -76,11 +76,9 @@ const Home = () => {
     if (window.confirm("¿Seguro que quieres salir?")) {
         const token = localStorage.getItem('chantli_token');
         
-        // 1. Borramos sesión y salimos INMEDIATAMENTE para que la UI no se trabe
         localStorage.removeItem('chantli_token');
         navigate('/');
         
-        // 2. Avisamos a Django en segundo plano (sin 'await' que bloquee el código)
         if ('serviceWorker' in navigator && token) {
             navigator.serviceWorker.ready.then(registration => {
                 return registration.pushManager.getSubscription();
@@ -131,22 +129,17 @@ const Home = () => {
 
   // --- USE EFFECT PRINCIPAL (Carga Inicial y Búsqueda Externa) ---
   useEffect(() => {
-    // 1. REVISAR SI LLEGAMOS AQUÍ DESDE OTRA PÁGINA CON UNA BÚSQUEDA
     if (location.state && location.state.searchQuery) {
         const query = location.state.searchQuery;
-        setSearchText(query); // Llenamos el input visualmente
-        setActiveFilter('Custom'); // Quitamos los filtros rápidos
-        fetchProperties(`?search=${query}`); // Buscamos en la API
+        setSearchText(query); 
+        setActiveFilter('Custom'); 
+        fetchProperties(`?search=${query}`); 
         
-        // Limpiamos el state de la URL para que si el usuario recarga la página, 
-        // no se vuelva a aplicar la búsqueda obligatoriamente
         window.history.replaceState({}, document.title);
     } else {
-        // Si entramos normal, cargamos todo
         fetchProperties(); 
     }
 
-    // 2. Cargar Usuario y verificar Roles
     const token = localStorage.getItem('chantli_token');
     if (token) {
         subscribeToPush(token);
@@ -175,7 +168,7 @@ const Home = () => {
         setIsHost(false);
         setIsAdmin(false);
     }
-  }, [navigate, location.state]); // <-- IMPORTANTE: agregamos location.state a las dependencias
+  }, [navigate, location.state]); 
 
   // --- MANEJADORES DE BÚSQUEDA MANUAL EN HOME ---
   const handleSearch = () => {
@@ -220,83 +213,103 @@ const Home = () => {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 font-sans select-none">
       
-      {/* --- HEADER SUPERIOR (Sticky) --- */}
+      {/* ======================================================== */}
+      {/* HEADER SUPERIOR (Sticky) - ESTILO UNIFICADO                */}
+      {/* ======================================================== */}
       <div className="bg-white sticky top-0 z-30 px-4 py-3 shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
             
-            <div className="flex justify-between items-center mb-3">
-                {/* Ubicación */}
-                <div className="flex items-center text-brand-900 bg-brand-50 px-3 py-1 rounded-full cursor-pointer hover:bg-brand-100 transition">
-                    <MapPin className="h-4 w-4 mr-1 text-brand-600" />
-                    <span className="font-bold text-xs sm:text-sm">Guadalajara, ZMG</span>
+            {/* Fila superior en móvil / Extremo Izquierdo en Desktop */}
+            <div className="flex justify-between items-center w-full md:w-auto gap-4">
+                
+                {/* --- IZQUIERDA: Píldora de Logo (Igual a PropertyDetail) --- */}
+                <div 
+                    onClick={() => {
+                        setSearchText('');
+                        applyQuickFilter('Todos');
+                    }} 
+                    className="flex items-center gap-1.5 cursor-pointer group transition"
+                    title="Recargar Inicio"
+                >
+                    <HomeIcon strokeWidth={1.5} className="h-6 w-6 text-brand-600 group-hover:scale-105 transition-transform" />
+                    <span className="font-logo text-xl tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                        Chantli
+                    </span>
                 </div>
 
-                {/* Botones Derecha */}
-                <div className="flex items-center gap-3">
+                {/* Acciones Rápidas (Móvil) - Se ocultan en Desktop y pasan a la derecha */}
+                <div className="flex items-center gap-2 md:hidden">
                     {isAdmin && (
-                        <button 
-                            onClick={() => navigate('/admin-panel')}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-white rounded-full text-xs font-bold shadow-md hover:bg-black transition active:scale-95 animate-fade-in border border-gray-700"
-                        >
-                            <ShieldCheck className="h-3 w-3" />
-                            <span className="hidden sm:inline">Validar</span>
+                        <button onClick={() => navigate('/admin-panel')} className="p-1.5 bg-gray-900 text-white rounded-full shadow-md active:scale-95">
+                            <ShieldCheck className="h-4 w-4" />
                         </button>
                     )}
-
-                    <button onClick={() => navigate('/historial-rentas')} className="px-3 py-1.5 bg-brand-600 text-white rounded-full text-xs font-bold shadow-md hover:bg-brand-700 transition active:scale-95">
-                            Mi Historial de Rentas
+                    <button onClick={() => navigate('/notifications')} className="p-1.5 bg-white rounded-full border border-gray-200 shadow-sm relative active:scale-95">
+                        <Bell className="h-4 w-4 text-gray-600" />
+                        {hasUnreadNotifications && <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full border border-white"></span>}
                     </button>
-
-                    <button 
-                        onClick={() => navigate('/notifications')}
-                        className="p-2 bg-white rounded-full border border-gray-100 shadow-sm relative active:scale-95 transition-transform hover:bg-gray-50"
-                    >
-                        <Bell className="h-5 w-5 text-gray-600" />
-                        {hasUnreadNotifications && (
-                            <span className="absolute top-1 right-2 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
-                        )}
-                    </button>
-                    
-                    <div 
-                        onClick={() => navigate('/profile')} 
-                        className="h-9 w-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border border-brand-200 cursor-pointer hover:bg-brand-200 transition overflow-hidden shadow-sm"
-                    >
-                        {userPhoto ? (
-                            <img 
-                                src={userPhoto.startsWith('http') ? userPhoto : `${API_URL}${userPhoto}`} 
-                                alt="Perfil" 
-                                className="h-full w-full object-cover" 
-                            />
-                        ) : (
-                            "U"
-                        )}
+                    <div onClick={() => navigate('/profile')} className="h-7 w-7 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border border-brand-200 cursor-pointer shadow-sm overflow-hidden">
+                        {userPhoto ? <img src={userPhoto.startsWith('http') ? userPhoto : `${API_URL}${userPhoto}`} alt="Perfil" className="h-full w-full object-cover" /> : "U"}
                     </div>
                 </div>
             </div>
             
-            {/* --- BARRA DE BÚSQUEDA ACTIVA --- */}
-            <div className="relative group">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 group-focus-within:text-brand-500" />
-                <input 
-                    type="text" 
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Busca por zona, escuela o amenidad..." 
-                    className="w-full bg-gray-100 rounded-xl py-2 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all shadow-sm"
-                />
-                <button 
-                    onClick={handleSearch}
-                    className="absolute right-2 top-1.5 p-1 bg-white rounded-lg border shadow-sm active:bg-gray-50 hover:text-brand-600"
-                >
-                    <Filter className="h-4 w-4 text-gray-600" />
+            {/* --- CENTRO: Barra de Búsqueda --- */}
+            <div className="flex-1 w-full md:max-w-xl mx-auto md:mx-4">
+                <div className="relative group shadow-sm rounded-full bg-gray-100 border border-gray-200 overflow-hidden transition-all focus-within:shadow-md focus-within:ring-2 focus-within:ring-brand-200 focus-within:bg-white">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-brand-600 transition-colors" />
+                    <input 
+                        type="text" 
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Busca por zona, escuela o amenidad..." 
+                        className="w-full bg-transparent py-2.5 pl-11 pr-12 text-sm focus:outline-none font-medium text-gray-700 placeholder-gray-400"
+                    />
+                    <button 
+                        onClick={handleSearch}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 bg-white rounded-full shadow-sm hover:bg-gray-50 hover:text-brand-600 transition-colors active:scale-95 border border-gray-100"
+                        title="Filtrar"
+                    >
+                        <Filter className="h-4 w-4 text-gray-600" />
+                    </button>
+                </div>
+            </div>
+
+            {/* --- DERECHA: Acciones (Desktop) --- */}
+            <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+                
+                {/* Indicador de Ubicación (Solo Desktop) */}
+                <div className="flex items-center text-brand-900 bg-brand-50 px-3 py-1.5 rounded-full cursor-pointer hover:bg-brand-100 transition mr-2">
+                    <MapPin className="h-4 w-4 mr-1 text-brand-600" />
+                    <span className="font-bold text-xs">Guadalajara, ZMG</span>
+                </div>
+
+                {isAdmin && (
+                    <button onClick={() => navigate('/admin-panel')} className="flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-white rounded-full text-xs font-bold shadow-md hover:bg-black transition active:scale-95 border border-gray-700">
+                        <ShieldCheck className="h-3 w-3" />
+                        <span>Validar</span>
+                    </button>
+                )}
+
+                <button onClick={() => navigate('/historial-rentas')} className="px-3 py-1.5 bg-brand-600 text-white rounded-full text-xs font-bold shadow-md hover:bg-brand-700 transition active:scale-95">
+                    Historial
                 </button>
+
+                <button onClick={() => navigate('/notifications')} className="p-2 bg-white rounded-full border border-gray-100 shadow-sm relative active:scale-95 transition-transform hover:bg-gray-50">
+                    <Bell className="h-5 w-5 text-gray-600" />
+                    {hasUnreadNotifications && <span className="absolute top-1 right-2 h-2 w-2 bg-red-500 rounded-full border border-white"></span>}
+                </button>
+                
+                <div onClick={() => navigate('/profile')} className="h-9 w-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border border-brand-200 cursor-pointer hover:bg-brand-200 transition overflow-hidden shadow-sm">
+                    {userPhoto ? <img src={userPhoto.startsWith('http') ? userPhoto : `${API_URL}${userPhoto}`} alt="Perfil" className="h-full w-full object-cover" /> : "U"}
+                </div>
             </div>
         </div>
       </div>
 
       {/* --- FILTROS RÁPIDOS ACTIVOS --- */}
-      <div className="bg-white/80 backdrop-blur-sm sticky top-[105px] z-20 border-b border-gray-100">
+      <div className="bg-white/80 backdrop-blur-sm sticky top-[110px] md:top-[68px] z-20 border-b border-gray-100">
           <div className="max-w-7xl mx-auto flex overflow-x-auto gap-3 px-4 py-3 scrollbar-hide">
             {['Todos', 'Económicos', 'Cerca de CUCEI', 'Amueblados', 'Solo Mujeres', 'Pet Friendly'].map((filtro, i) => (
                 <button 

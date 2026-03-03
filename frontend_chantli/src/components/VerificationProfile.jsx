@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, ShieldCheck, FileText, AlertTriangle, CheckCircle, User, Briefcase, Home, Camera, Edit3, XCircle, ExternalLink, Eye, ArrowLeft, X } from 'lucide-react';
+import { Upload, ShieldCheck, FileText, AlertTriangle, CheckCircle, User, Briefcase, Home as HomeIcon, Camera, Edit3, XCircle, ExternalLink, Eye, ArrowLeft, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -153,6 +153,17 @@ const VerificationProfile = () => {
         <button onClick={() => navigate('/profile')} className="flex items-center text-gray-600 hover:text-brand-600 font-bold transition">
             <ArrowLeft className="h-5 w-5 mr-1" /> Regresar al Perfil
         </button>
+        <div 
+                onClick={() => navigate('/home')} 
+                className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition"
+                title="Ir a Inicio"
+            >
+                <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
+                <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                    Chantli
+                </span>
+            </div>
+        
       </div>
 
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -284,7 +295,7 @@ const VerificationProfile = () => {
 
             <section className="bg-blue-50 p-5 rounded-xl border border-blue-100">
                 <h3 className="text-lg font-bold text-blue-900 flex items-center gap-2 mb-4">
-                    <Home className="h-5 w-5" /> Quiero Publicar Propiedades (Anfitrión)
+                    <HomeIcon className="h-5 w-5" /> Quiero Publicar Propiedades (Anfitrión)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input 

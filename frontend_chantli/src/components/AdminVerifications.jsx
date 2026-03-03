@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, FileText, Check, X as XIcon, User, Eye, AlertCircle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, FileText, Check, X as XIcon, User, Eye, AlertCircle, ExternalLink, Home as HomeIcon } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -105,6 +105,16 @@ const AdminVerifications = () => {
             <button onClick={() => navigate('/home')} className="bg-white p-2 rounded-full shadow hover:bg-gray-50 transition-colors">
                 <ArrowLeft className="h-5 w-5 text-gray-700" />
             </button>
+            <div 
+                onClick={() => navigate('/home')} 
+                className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition"
+                title="Ir a Inicio"
+            >
+                <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
+                <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                    Chantli
+                </span>
+            </div>
             <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                 <ShieldCheck className="h-8 w-8 text-brand-600" /> 
                 Centro de Validación

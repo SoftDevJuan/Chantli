@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     ArrowLeft, Camera, User, Mail, Phone, FileText, Save, X, Edit2, 
-    ShieldCheck, ShieldAlert, ChevronRight, Briefcase, Home // <--- 1. IMPORTAMOS EL ICONO HOME
+    ShieldCheck, ShieldAlert, ChevronRight, Briefcase, Home  as HomeIcon,// <--- 1. IMPORTAMOS EL ICONO HOME
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -136,13 +136,16 @@ const Profile = () => {
                 <ArrowLeft className="h-6 w-6 text-gray-700" />
             </button>
             {/* Botón de escape rápido a Home */}
-            <button 
-                onClick={() => navigate('/home')} 
-                className="p-2 rounded-full hover:bg-brand-50 transition text-brand-600"
-                title="Ir al Inicio"
-            >
-                <Home className="h-6 w-6" />
-            </button>
+            <div 
+                            onClick={() => navigate('/home')} 
+                            className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition"
+                            title="Ir a Inicio"
+                        >
+                            <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
+                            <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                                Chantli
+                            </span>
+                        </div>
         </div>
 
         <h1 className="font-bold text-lg text-gray-900">Mi Perfil</h1>
