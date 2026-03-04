@@ -317,7 +317,7 @@ const Home = () => {
                     onClick={() => applyQuickFilter(filtro)}
                     className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm 
                     ${activeFilter === filtro 
-                        ? 'bg-brand-600 text-gray-900 shadow-brand-200 ring-2 ring-brand-300' 
+                        ? 'bg-brand-600 text-gray-200 shadow-brand-200 ring-2 ring-brand-300' 
                         : 'bg-white text-gray-600 border border-gray-200 hover:border-brand-300 hover:text-brand-600'}`}
                 >
                     {filtro}
