@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
     MapPin, Search, Home as HomeIcon, Heart, MessageSquare, 
-    LogOut, Filter, Plus, User, LayoutDashboard, Bell, ShieldCheck, Loader2 
+    LogOut, Filter, Plus, User, LayoutDashboard, Bell, ShieldCheck, Loader2, Gamepad2, History // <- Importamos Gamepad2 y History
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -127,7 +127,7 @@ const Home = () => {
         });
   };
 
-  // --- USE EFFECT PRINCIPAL (Carga Inicial y Búsqueda Externa) ---
+  // --- USE EFFECT PRINCIPAL ---
   useEffect(() => {
     if (location.state && location.state.searchQuery) {
         const query = location.state.searchQuery;
@@ -170,7 +170,7 @@ const Home = () => {
     }
   }, [navigate, location.state]); 
 
-  // --- MANEJADORES DE BÚSQUEDA MANUAL EN HOME ---
+  // --- MANEJADORES DE BÚSQUEDA ---
   const handleSearch = () => {
       setActiveFilter('Custom'); 
       fetchProperties(`?search=${searchText}`);
@@ -214,36 +214,37 @@ const Home = () => {
     <div className="bg-gray-50 min-h-screen pb-28 font-sans select-none">
       
       {/* ======================================================== */}
-      {/* HEADER SUPERIOR (Sticky) - ESTILO UNIFICADO                */}
+      {/* HEADER SUPERIOR (Sticky)                                 */}
       {/* ======================================================== */}
-      <div className="bg-white sticky top-0 z-30 px-4 py-3 shadow-sm border-b border-gray-100">
+      <div className="bg-white/90 backdrop-blur-md sticky top-0 z-30 px-4 py-3 shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
             
             {/* Fila superior en móvil / Extremo Izquierdo en Desktop */}
             <div className="flex justify-between items-center w-full md:w-auto gap-4">
                 
-                {/* --- IZQUIERDA: Píldora de Logo (Igual a PropertyDetail) --- */}
-                <div 
-                    onClick={() => {
-                        setSearchText('');
-                        applyQuickFilter('Todos');
-                    }} 
-                    className="flex items-center gap-1.5 cursor-pointer group transition"
-                    title="Recargar Inicio"
-                >
-                    <HomeIcon strokeWidth={1.5} className="h-6 w-6 text-brand-600 group-hover:scale-105 transition-transform" />
-                    <span className="font-logo text-xl tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
-                        Chantli
-                    </span>
+                {/* --- PÍLDORA DE NAVEGACIÓN Y LOGO --- */}
+                <div className="bg-white rounded-full shadow-sm flex items-center p-1 border border-gray-200 transition">
+                    <div 
+                        onClick={() => {
+                            setSearchText('');
+                            applyQuickFilter('Todos');
+                        }} 
+                        className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition"
+                        title="Recargar Inicio"
+                    >
+                        <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
+                        <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                            Chantli
+                        </span>
+                    </div>
                 </div>
 
-                {/* Acciones Rápidas (Móvil) - Se ocultan en Desktop y pasan a la derecha */}
+                {/* --- ACCIONES RÁPIDAS (MÓVIL) --- */}
                 <div className="flex items-center gap-2 md:hidden">
-                    {isAdmin && (
-                        <button onClick={() => navigate('/admin-panel')} className="p-1.5 bg-gray-900 text-white rounded-full shadow-md active:scale-95">
-                            <ShieldCheck className="h-4 w-4" />
-                        </button>
-                    )}
+                    {/* NUEVO: Botón Arcade en Móvil */}
+                    <button onClick={() => navigate('/arcade')} className="p-1.5 bg-brand-50 text-brand-600 rounded-full shadow-sm active:scale-95 border border-brand-100">
+                        <Gamepad2 className="h-4 w-4" />
+                    </button>
                     <button onClick={() => navigate('/notifications')} className="p-1.5 bg-white rounded-full border border-gray-200 shadow-sm relative active:scale-95">
                         <Bell className="h-4 w-4 text-gray-600" />
                         {hasUnreadNotifications && <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full border border-white"></span>}
@@ -279,7 +280,6 @@ const Home = () => {
             {/* --- DERECHA: Acciones (Desktop) --- */}
             <div className="hidden md:flex items-center gap-3 flex-shrink-0">
                 
-                {/* Indicador de Ubicación (Solo Desktop) */}
                 <div className="flex items-center text-brand-900 bg-brand-50 px-3 py-1.5 rounded-full cursor-pointer hover:bg-brand-100 transition mr-2">
                     <MapPin className="h-4 w-4 mr-1 text-brand-600" />
                     <span className="font-bold text-xs">Guadalajara, ZMG</span>
@@ -292,7 +292,18 @@ const Home = () => {
                     </button>
                 )}
 
-                <button onClick={() => navigate('/historial-rentas')} className="px-3 py-1.5 bg-brand-600 text-white rounded-full text-xs font-bold shadow-md hover:bg-brand-700 transition active:scale-95">
+                {/* NUEVO: Botón Arcade en Desktop */}
+                <button 
+                    onClick={() => navigate('/arcade')} 
+                    className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-brand-600 to-brand-500 text-white rounded-full text-xs font-bold shadow-md hover:shadow-lg transition active:scale-95"
+                    title="Jugar Minijuegos"
+                >
+                    <Gamepad2 className="h-4 w-4" />
+                    <span>Arcade</span>
+                </button>
+
+                {/* Historial en Desktop (En móvil ahora estará abajo) */}
+                <button onClick={() => navigate('/historial-rentas')} className="px-3 py-1.5 bg-white text-gray-700 border border-gray-200 rounded-full text-xs font-bold shadow-sm hover:bg-gray-50 transition active:scale-95">
                     Historial
                 </button>
 
@@ -309,7 +320,7 @@ const Home = () => {
       </div>
 
       {/* --- FILTROS RÁPIDOS ACTIVOS --- */}
-      <div className="bg-white/80 backdrop-blur-sm sticky top-[110px] md:top-[68px] z-20 border-b border-gray-100">
+      <div className="bg-white/80 backdrop-blur-sm sticky top-[115px] md:top-[68px] z-20 border-b border-gray-100">
           <div className="max-w-7xl mx-auto flex overflow-x-auto gap-3 px-4 py-3 scrollbar-hide">
             {['Todos', 'Económicos', 'Cerca de CUCEI', 'Amueblados', 'Solo Mujeres', 'Pet Friendly'].map((filtro, i) => (
                 <button 
@@ -317,7 +328,7 @@ const Home = () => {
                     onClick={() => applyQuickFilter(filtro)}
                     className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm 
                     ${activeFilter === filtro 
-                        ? 'bg-brand-600 text-gray-200 shadow-brand-200 ring-2 ring-brand-300' 
+                        ? 'bg-brand-600 text-white shadow-brand-200 ring-2 ring-brand-300' 
                         : 'bg-white text-gray-600 border border-gray-200 hover:border-brand-300 hover:text-brand-600'}`}
                 >
                     {filtro}
@@ -350,7 +361,6 @@ const Home = () => {
                 {propiedades.map(prop => (
                     <div key={prop.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300 flex flex-col group">
                         
-                        {/* CARRUSEL DE FOTOS */}
                         <div className="relative h-56 bg-gray-200 cursor-pointer" onClick={() => navigate(`/propiedad/${prop.id}`)}>
                             <div className="flex overflow-x-auto snap-x snap-mandatory h-full w-full scrollbar-hide">
                                 <div className="flex-shrink-0 w-full h-full snap-center">
@@ -408,13 +418,15 @@ const Home = () => {
       {isHost && (
           <button 
             onClick={() => navigate('/create')}
-            className="fixed bottom-24 right-4 h-14 w-14 bg-brand-600 text-gray-800 rounded-full shadow-xl shadow-brand-200 flex items-center justify-center hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all z-40"
+            className="fixed bottom-24 right-4 h-14 w-14 bg-brand-600 text-white rounded-full shadow-xl shadow-brand-200 flex items-center justify-center hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all z-40"
           >
             <Plus className="h-8 w-8" />
           </button>
       )}
 
-      {/* --- NAVBAR INFERIOR --- */}
+      {/* ======================================================== */}
+      {/* NAVBAR INFERIOR (Arreglado para Móvil)                     */}
+      {/* ======================================================== */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-around items-center z-50 h-[70px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         
         <button className="flex flex-col items-center text-brand-900 w-14">
@@ -422,12 +434,22 @@ const Home = () => {
             <span className="text-[10px] font-bold">Inicio</span>
         </button>
 
+        {/* NAVEGACIÓN A FAVORITOS */}
         <button 
             onClick={() => navigate('/favorites')}
-            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group"
+            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group hidden sm:flex"
         >
             <Heart className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
             <span className="text-[10px] font-medium">Favs</span>
+        </button>
+
+        {/* NUEVO: HISTORIAL EN MÓVIL (Visible siempre) */}
+        <button 
+            onClick={() => navigate('/historial-rentas')}
+            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group sm:hidden"
+        >
+            <History className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
+            <span className="text-[10px] font-medium">Historial</span>
         </button>
 
         {isHost && (
@@ -453,8 +475,8 @@ const Home = () => {
                 <MessageSquare className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
                 {unreadMessages > 0 && (
                     <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-500 border-2 border-white"></span>
                     </span>
                 )}
             </div>
