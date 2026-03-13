@@ -901,3 +901,51 @@ class UnsubscribePushView(APIView):
         ).delete()
 
         return Response({'status': 'Dispositivo desvinculado con éxito'}, status=status.HTTP_200_OK)
+    
+    
+
+class AdminDashboardStatsView(APIView):
+    # SEGURIDAD: Solo usuarios con is_staff=True o is_superuser=True pueden acceder
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        now = timezone.now()
+        current_month = now.month
+        current_year = now.year
+
+        # 1 y 2. Ingresos (Revenue Total y Separación)
+        # Filtramos solo reservas que realmente generaron dinero
+        reservas_pagadas = Reserva.objects.filter(estado__in=['pagada', 'finalizada'])
+        ingresos_totales = reservas_pagadas.aggregate(Sum('total'))['total__sum'] or 0
+        
+        # LÓGICA DE NEGOCIO: Asumimos que Chantli cobra un 10% de comisión. 
+        # (Ajusta este 0.10 según la regla de negocio real de tu app).
+        ganancias_chantli = float(ingresos_totales) * 0.10
+        ganancias_anfitriones = float(ingresos_totales) * 0.90
+
+        # 3. Ocupación Mensual
+        # Calculamos cuántas propiedades únicas han tenido al menos una reserva este mes
+        propiedades_totales = Propiedad.objects.count()
+        reservas_mes = reservas_pagadas.filter(fecha_inicio__month=current_month, fecha_inicio__year=current_year)
+        propiedades_activas_mes = reservas_mes.values('propiedad').distinct().count()
+        
+        ocupacion_porcentaje = (propiedades_activas_mes / propiedades_totales * 100) if propiedades_totales > 0 else 0
+
+        # 4. Salud de la Reputación (Global)
+        stats_resenas = Resena.objects.aggregate(promedio=Avg('calificacion'), total=Count('id'))
+        promedio_rating = stats_resenas['promedio'] or 0
+        total_resenas = stats_resenas['total']
+
+        # 5. Favoritos Totales
+        total_favoritos = Favorito.objects.count()
+
+        return Response({
+            'ingresos_totales': ingresos_totales,
+            'ganancias_chantli': ganancias_chantli,
+            'ganancias_anfitriones': ganancias_anfitriones,
+            'ocupacion_porcentaje': round(ocupacion_porcentaje, 1),
+            'promedio_rating': round(promedio_rating, 2),
+            'total_resenas': total_resenas,
+            'total_favoritos': total_favoritos,
+            'propiedades_totales': propiedades_totales
+        })

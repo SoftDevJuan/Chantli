@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
     MapPin, Search, Home as HomeIcon, Heart, MessageSquare, 
-    LogOut, Filter, Plus, User, LayoutDashboard, Bell, ShieldCheck, Loader2, Gamepad2, History // <- Importamos Gamepad2 y History
+    LogOut, Filter, Plus, User, LayoutDashboard, Bell, ShieldCheck, Loader2, Gamepad2, History, Activity 
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -47,7 +47,6 @@ const subscribeToPush = async (token) => {
             },
             body: JSON.stringify(payload)
         });
-        console.log("📱 Suscripción Push guardada en Django!");
     } catch (error) {
         console.error("Error al suscribir a Push:", error);
     }
@@ -65,12 +64,26 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [userPhoto, setUserPhoto] = useState(null); 
-  
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   // --- ESTADOS DE BÚSQUEDA ---
   const [searchText, setSearchText] = useState('');
   const [activeFilter, setActiveFilter] = useState('Todos');
+
+  // --- ESTADO PARA EL MENÚ DESPLEGABLE ---
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  // Cerrar menú al hacer clic fuera
+  useEffect(() => {
+      const handleClickOutside = (event) => {
+          if (menuRef.current && !menuRef.current.contains(event.target)) {
+              setIsMenuOpen(false);
+          }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     if (window.confirm("¿Seguro que quieres salir?")) {
@@ -91,11 +104,9 @@ const Home = () => {
                             'Authorization': `Token ${token}`
                         },
                         body: JSON.stringify({ endpoint: subscription.endpoint })
-                    }).catch(e => console.error("Error de red en unsubscribe:", e));
+                    }).catch(e => console.error("Error en unsubscribe:", e));
                 }
-            }).catch(error => {
-                console.error("Error al desvincular notificaciones:", error);
-            });
+            }).catch(console.error);
         }
     }
   };
@@ -112,16 +123,13 @@ const Home = () => {
         })
         .then(data => {
             let lista = [];
-            if (Array.isArray(data)) {
-                lista = data;
-            } else if (data && data.results && Array.isArray(data.results)) {
-                lista = data.results; 
-            }
+            if (Array.isArray(data)) lista = data;
+            else if (data && data.results && Array.isArray(data.results)) lista = data.results; 
             setPropiedades(lista);
             setLoading(false);
         })
         .catch(err => {
-            console.error("❌ Error cargando propiedades:", err);
+            console.error("❌ Error:", err);
             setPropiedades([]);
             setLoading(false);
         });
@@ -134,7 +142,6 @@ const Home = () => {
         setSearchText(query); 
         setActiveFilter('Custom'); 
         fetchProperties(`?search=${query}`); 
-        
         window.history.replaceState({}, document.title);
     } else {
         fetchProperties(); 
@@ -163,55 +170,37 @@ const Home = () => {
             .then(r => r.ok ? r.json() : { count: 0 })
             .then(data => setUnreadMessages(data.count))
             .catch(console.error);
-            
     } else {
         setIsHost(false);
         setIsAdmin(false);
     }
   }, [navigate, location.state]); 
 
-  // --- MANEJADORES DE BÚSQUEDA ---
   const handleSearch = () => {
       setActiveFilter('Custom'); 
       fetchProperties(`?search=${searchText}`);
   };
 
   const handleKeyDown = (e) => {
-      if (e.key === 'Enter') {
-          handleSearch();
-      }
+      if (e.key === 'Enter') handleSearch();
   };
 
   const applyQuickFilter = (filtro) => {
       setActiveFilter(filtro);
       setSearchText(''); 
-
       switch (filtro) {
-          case 'Todos':
-              fetchProperties();
-              break;
-          case 'Económicos':
-              fetchProperties('?ordering=precio'); 
-              break;
-          case 'Cerca de CUCEI':
-              fetchProperties('?search=CUCEI');
-              break;
-          case 'Amueblados':
-              fetchProperties('?search=Amueblado');
-              break;
-          case 'Solo Mujeres':
-              fetchProperties('?search=Mujeres');
-              break;
-          case 'Pet Friendly':
-              fetchProperties('?search=Mascotas'); 
-              break;
-          default:
-              fetchProperties();
+          case 'Todos': fetchProperties(); break;
+          case 'Económicos': fetchProperties('?ordering=precio'); break;
+          case 'Cerca de CUCEI': fetchProperties('?search=CUCEI'); break;
+          case 'Amueblados': fetchProperties('?search=Amueblado'); break;
+          case 'Solo Mujeres': fetchProperties('?search=Mujeres'); break;
+          case 'Pet Friendly': fetchProperties('?search=Mascotas'); break;
+          default: fetchProperties();
       }
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-28 font-sans select-none">
+    <div className="bg-gray-50 min-h-screen pb-28 font-sans select-none relative">
       
       {/* ======================================================== */}
       {/* HEADER SUPERIOR (Sticky)                                 */}
@@ -223,7 +212,7 @@ const Home = () => {
             <div className="flex justify-between items-center w-full md:w-auto gap-4">
                 
                 {/* --- PÍLDORA DE NAVEGACIÓN Y LOGO --- */}
-                <div className="bg-white rounded-full shadow-sm flex items-center p-1 border border-gray-200 transition">
+                <div className="bg-white rounded-full shadow-sm flex items-center p-1 border border-gray-200 transition hover:bg-gray-50">
                     <div 
                         onClick={() => {
                             setSearchText('');
@@ -240,17 +229,61 @@ const Home = () => {
                 </div>
 
                 {/* --- ACCIONES RÁPIDAS (MÓVIL) --- */}
-                <div className="flex items-center gap-2 md:hidden">
-                    {/* NUEVO: Botón Arcade en Móvil */}
-                    <button onClick={() => navigate('/arcade')} className="p-1.5 bg-brand-50 text-brand-600 rounded-full shadow-sm active:scale-95 border border-brand-100">
+                <div className="flex items-center gap-3 md:hidden">
+                    <button 
+                        onClick={() => navigate('/arcade')} 
+                        className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-brand-600 to-brand-500 text-white rounded-full text-xs font-bold shadow-md hover:shadow-lg transition active:scale-95"
+                    >
                         <Gamepad2 className="h-4 w-4" />
+                        <span>Arcade</span>
                     </button>
-                    <button onClick={() => navigate('/notifications')} className="p-1.5 bg-white rounded-full border border-gray-200 shadow-sm relative active:scale-95">
+
+                    <button onClick={() => navigate('/notifications')} className="p-2 bg-white rounded-full border border-gray-200 shadow-sm relative active:scale-95">
                         <Bell className="h-4 w-4 text-gray-600" />
                         {hasUnreadNotifications && <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full border border-white"></span>}
                     </button>
-                    <div onClick={() => navigate('/profile')} className="h-7 w-7 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border border-brand-200 cursor-pointer shadow-sm overflow-hidden">
-                        {userPhoto ? <img src={userPhoto.startsWith('http') ? userPhoto : `${API_URL}${userPhoto}`} alt="Perfil" className="h-full w-full object-cover" /> : "U"}
+                    
+                    {/* Botón de Perfil Móvil (Abre Menú) */}
+                    <div className="relative" ref={menuRef}>
+                        <div 
+                            onClick={() => setIsMenuOpen(!isMenuOpen)} 
+                            className="h-8 w-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border-2 border-brand-200 cursor-pointer shadow-sm overflow-hidden active:scale-95 transition-transform"
+                        >
+                            {userPhoto ? <img src={userPhoto.startsWith('http') ? userPhoto : `${API_URL}${userPhoto}`} alt="Perfil" className="h-full w-full object-cover" /> : "U"}
+                        </div>
+
+                        {/* MENÚ DESPLEGABLE MÓVIL */}
+                        {isMenuOpen && (
+                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-fade-in origin-top-right">
+                                <div className="px-4 py-2 border-b border-gray-50 mb-1">
+                                    <p className="text-sm font-bold text-gray-800">Mi Cuenta</p>
+                                </div>
+                                
+                                <button onClick={() => { navigate('/profile'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+                                    <User className="h-4 w-4" /> Ver Perfil
+                                </button>
+                                <button onClick={() => { navigate('/historial-rentas'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+                                    <History className="h-4 w-4" /> Historial de Rentas
+                                </button>
+
+                                {isAdmin && (
+                                    <>
+                                        <div className="h-px bg-gray-100 my-1 mx-4"></div>
+                                        <button onClick={() => { navigate('/admin-stats'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+                                            <Activity className="h-4 w-4 text-brand-600" /> Panel de Métricas
+                                        </button>
+                                        <button onClick={() => { navigate('/admin-panel'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+                                            <ShieldCheck className="h-4 w-4 text-gray-900" /> Validar Propiedades
+                                        </button>
+                                    </>
+                                )}
+
+                                <div className="h-px bg-gray-100 my-1 mx-4"></div>
+                                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition">
+                                    <LogOut className="h-4 w-4" /> Cerrar Sesión
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -270,7 +303,6 @@ const Home = () => {
                     <button 
                         onClick={handleSearch}
                         className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 bg-white rounded-full shadow-sm hover:bg-gray-50 hover:text-brand-600 transition-colors active:scale-95 border border-gray-100"
-                        title="Filtrar"
                     >
                         <Filter className="h-4 w-4 text-gray-600" />
                     </button>
@@ -285,42 +317,74 @@ const Home = () => {
                     <span className="font-bold text-xs">Guadalajara, ZMG</span>
                 </div>
 
-                {isAdmin && (
-                    <button onClick={() => navigate('/admin-panel')} className="flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-white rounded-full text-xs font-bold shadow-md hover:bg-black transition active:scale-95 border border-gray-700">
-                        <ShieldCheck className="h-3 w-3" />
-                        <span>Validar</span>
-                    </button>
-                )}
-
-                {/* NUEVO: Botón Arcade en Desktop */}
                 <button 
                     onClick={() => navigate('/arcade')} 
-                    className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-brand-600 to-brand-500 text-white rounded-full text-xs font-bold shadow-md hover:shadow-lg transition active:scale-95"
-                    title="Jugar Minijuegos"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-brand-600 to-brand-500 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg transition active:scale-95"
                 >
                     <Gamepad2 className="h-4 w-4" />
-                    <span>Arcade</span>
+                    <span>Zona Arcade</span>
                 </button>
 
-                {/* Historial en Desktop (En móvil ahora estará abajo) */}
-                <button onClick={() => navigate('/historial-rentas')} className="px-3 py-1.5 bg-white text-gray-700 border border-gray-200 rounded-full text-xs font-bold shadow-sm hover:bg-gray-50 transition active:scale-95">
-                    Historial
-                </button>
-
-                <button onClick={() => navigate('/notifications')} className="p-2 bg-white rounded-full border border-gray-100 shadow-sm relative active:scale-95 transition-transform hover:bg-gray-50">
+                <button onClick={() => navigate('/notifications')} className="p-2.5 bg-white rounded-full border border-gray-100 shadow-sm relative active:scale-95 transition-transform hover:bg-gray-50">
                     <Bell className="h-5 w-5 text-gray-600" />
                     {hasUnreadNotifications && <span className="absolute top-1 right-2 h-2 w-2 bg-red-500 rounded-full border border-white"></span>}
                 </button>
                 
-                <div onClick={() => navigate('/profile')} className="h-9 w-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border border-brand-200 cursor-pointer hover:bg-brand-200 transition overflow-hidden shadow-sm">
-                    {userPhoto ? <img src={userPhoto.startsWith('http') ? userPhoto : `${API_URL}${userPhoto}`} alt="Perfil" className="h-full w-full object-cover" /> : "U"}
+                {/* Botón de Perfil Desktop (Abre Menú) */}
+                <div className="relative" ref={menuRef}>
+                    <div 
+                        onClick={() => setIsMenuOpen(!isMenuOpen)} 
+                        className="h-10 w-10 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold border-2 border-brand-200 cursor-pointer hover:border-brand-400 transition-all overflow-hidden shadow-sm active:scale-95"
+                    >
+                        {userPhoto ? <img src={userPhoto.startsWith('http') ? userPhoto : `${API_URL}${userPhoto}`} alt="Perfil" className="h-full w-full object-cover" /> : "U"}
+                    </div>
+
+                    {/* MENÚ DESPLEGABLE DESKTOP */}
+                    {isMenuOpen && (
+                        <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-fade-in origin-top-right">
+                            <div className="px-4 py-3 border-b border-gray-50 mb-1 flex items-center gap-3">
+                                <div className="h-10 w-10 bg-brand-100 rounded-full overflow-hidden flex items-center justify-center font-bold text-brand-600">
+                                     {userPhoto ? <img src={userPhoto.startsWith('http') ? userPhoto : `${API_URL}${userPhoto}`} alt="Perfil" className="h-full w-full object-cover" /> : "U"}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-gray-900">Mi Cuenta</p>
+                                    <p className="text-xs text-gray-500">{isAdmin ? 'Administrador' : (isHost ? 'Anfitrión' : 'Huésped')}</p>
+                                </div>
+                            </div>
+                            
+                            <button onClick={() => { navigate('/profile'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+                                <User className="h-4 w-4" /> Perfil
+                            </button>
+                            <button onClick={() => { navigate('/historial-rentas'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+                                <History className="h-4 w-4" /> Historial de Rentas
+                            </button>
+
+                            {isAdmin && (
+                                <>
+                                    <div className="h-px bg-gray-100 my-2 mx-4"></div>
+                                    <p className="px-5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Administración</p>
+                                    <button onClick={() => { navigate('/admin-stats'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+                                        <Activity className="h-4 w-4 text-brand-600" /> Panel de Métricas
+                                    </button>
+                                    <button onClick={() => { navigate('/admin-panel'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+                                        <ShieldCheck className="h-4 w-4 text-gray-900" /> Validar Propiedades
+                                    </button>
+                                </>
+                            )}
+
+                            <div className="h-px bg-gray-100 my-2 mx-4"></div>
+                            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 transition">
+                                <LogOut className="h-4 w-4" /> Cerrar Sesión
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
       </div>
 
       {/* --- FILTROS RÁPIDOS ACTIVOS --- */}
-      <div className="bg-white/80 backdrop-blur-sm sticky top-[115px] md:top-[68px] z-20 border-b border-gray-100">
+      <div className="bg-white/80 backdrop-blur-sm sticky top-[115px] md:top-[76px] z-20 border-b border-gray-100">
           <div className="max-w-7xl mx-auto flex overflow-x-auto gap-3 px-4 py-3 scrollbar-hide">
             {['Todos', 'Económicos', 'Cerca de CUCEI', 'Amueblados', 'Solo Mujeres', 'Pet Friendly'].map((filtro, i) => (
                 <button 
@@ -425,40 +489,30 @@ const Home = () => {
       )}
 
       {/* ======================================================== */}
-      {/* NAVBAR INFERIOR (Arreglado para Móvil)                     */}
+      {/* NAVBAR INFERIOR (LIMPIO Y ESPACIADO)                       */}
       {/* ======================================================== */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-around items-center z-50 h-[70px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         
-        <button className="flex flex-col items-center text-brand-900 w-14">
+        <button onClick={() => navigate('/home')} className="flex flex-col items-center text-brand-900 w-14 transition-transform active:scale-95">
             <HomeIcon className="h-6 w-6 mb-1" />
             <span className="text-[10px] font-bold">Inicio</span>
         </button>
 
-        {/* NAVEGACIÓN A FAVORITOS */}
         <button 
             onClick={() => navigate('/favorites')}
-            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group hidden sm:flex"
+            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group active:scale-95"
         >
-            <Heart className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
+            <Heart className="h-6 w-6 mb-1 transition-transform" />
             <span className="text-[10px] font-medium">Favs</span>
-        </button>
-
-        {/* NUEVO: HISTORIAL EN MÓVIL (Visible siempre) */}
-        <button 
-            onClick={() => navigate('/historial-rentas')}
-            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group sm:hidden"
-        >
-            <History className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
-            <span className="text-[10px] font-medium">Historial</span>
         </button>
 
         {isHost && (
             <button 
                 onClick={() => navigate('/host')}
-                className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group relative"
+                className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group relative active:scale-95"
             >
                 <div className="relative">
-                    <LayoutDashboard className="h-6 w-6 mb-1 group-active:scale-90 transition-transform text-brand-900" />
+                    <LayoutDashboard className="h-6 w-6 mb-1 transition-transform text-brand-900" />
                     {unreadMessages > 0 && (
                         <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
                     )}
@@ -469,10 +523,10 @@ const Home = () => {
 
         <button 
             onClick={() => navigate('/inbox')}
-            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group relative"
+            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group relative active:scale-95"
         >
             <div className="relative">
-                <MessageSquare className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
+                <MessageSquare className="h-6 w-6 mb-1 transition-transform" />
                 {unreadMessages > 0 && (
                     <span className="absolute -top-1 -right-1 flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
@@ -483,21 +537,6 @@ const Home = () => {
             <span className="text-[10px] font-medium">Chat</span>
         </button>
         
-        <button 
-            onClick={() => navigate('/profile')}
-            className="flex flex-col items-center text-gray-400 hover:text-brand-600 transition-colors w-14 group"
-        >
-            <User className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
-            <span className="text-[10px] font-medium">Perfil</span>
-        </button>
-
-        <button 
-            onClick={handleLogout}
-            className="flex flex-col items-center text-gray-900 hover:text-red-500 transition-colors w-14 group"
-        >
-            <LogOut className="h-6 w-6 mb-1 group-active:scale-90 transition-transform" />
-            <span className="text-[10px] font-medium">Salir</span>
-        </button>
       </div>
     </div>
   );

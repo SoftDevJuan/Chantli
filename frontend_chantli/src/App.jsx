@@ -19,6 +19,7 @@ import Favorites from './components/Favorites';
 import HistorialRentas from './components/HistorialRentas';
 import EditProperty from './components/EditProperty';
 import GameView from './components/CameView';
+import AdminStats from './components/AdminStats';
 
 
 
@@ -46,6 +47,7 @@ function App() {
         <Route path="/historial-rentas" element={<HistorialRentas />} />
         <Route path="/edit-property/:id" element={<EditProperty />} />
         <Route path="/arcade" element={<GameView />} />
+        <Route path="/admin-stats" element={<AdminStats />} />
       </Routes>
     </BrowserRouter>
   );

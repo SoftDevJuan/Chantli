@@ -8,9 +8,6 @@ const GameView = () => {
     return (
         <div className="min-h-screen bg-gray-50 pb-20 font-sans">
             
-            {/* ======================================================== */}
-            {/* HEADER UNIFICADO CHANTLI                                 */}
-            {/* ======================================================== */}
             <div className="bg-white/90 backdrop-blur-md p-4 shadow-sm sticky top-0 z-30 flex items-center justify-between border-b border-gray-100">
                 <div className="flex items-center pointer-events-auto">
                     <div className="bg-white rounded-full shadow-sm flex items-center p-1 border border-gray-200 transition hover:bg-gray-50">

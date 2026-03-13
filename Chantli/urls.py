@@ -24,4 +24,5 @@ urlpatterns = [
     path('public-profile/<int:pk>/', PublicUserProfileView.as_view()),
     path('webpush/subscribe/', SubscribePushView.as_view(), name='webpush-subscribe'),
     path('webpush/unsubscribe/', UnsubscribePushView.as_view(), name='webpush-unsubscribe'),
+    path('admin-stats/', AdminDashboardStatsView.as_view(), name='admin-stats'),
 ]
