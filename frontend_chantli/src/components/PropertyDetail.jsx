@@ -412,11 +412,34 @@ const PropertyDetail = () => {
         <div className="mb-10">
             <h3 className="font-bold text-xl mb-4 text-gray-900">Lo que ofrece este lugar</h3>
             <div className="grid grid-cols-2 gap-y-4 gap-x-4">
-                {propiedad.amenidades ? JSON.parse(propiedad.amenidades).map(s => (
-                    <div key={s} className="flex items-center text-gray-700">
-                        <CheckCircle className="h-5 w-5 mr-3 text-brand-500 flex-shrink-0" /> {s}
-                    </div>
-                )) : <span className="text-sm text-gray-400">Sin amenidades listadas.</span>}
+                {(() => {
+                    if (!propiedad.amenidades) {
+                        return <span className="text-sm text-gray-400">Sin amenidades listadas.</span>;
+                    }
+
+                    let listaAmenidades = [];
+                    
+                    try {
+                        // 1. Intentamos leerlo como JSON (Para tus publicaciones manuales)
+                        const parsed = JSON.parse(propiedad.amenidades);
+                        if (Array.isArray(parsed)) {
+                            listaAmenidades = parsed;
+                        } else {
+                            // Si por alguna razón es JSON pero no es arreglo, lo pasamos a texto
+                            listaAmenidades = [String(parsed)];
+                        }
+                    } catch (error) {
+                        // 2. Si da error (como pasó con el script), usamos .split(',')
+                        listaAmenidades = propiedad.amenidades.split(',');
+                    }
+
+                    return listaAmenidades.map((amenidad, index) => (
+                        <div key={index} className="flex items-center text-gray-700">
+                            <CheckCircle className="h-5 w-5 mr-3 text-brand-500 flex-shrink-0" /> 
+                            {amenidad.trim()}
+                        </div>
+                    ));
+                })()}
             </div>
         </div>
 

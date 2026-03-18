@@ -122,16 +122,6 @@ class ResenaUsuario(models.Model):
         return f"De {self.autor.username} para {self.destinatario.username}"
 
 
-class Tarjeta(models.Model):
-    titular = models.CharField(max_length=100)
-    numero = models.CharField(max_length=16, unique=True) # Fake 16 digits
-    fecha_vencimiento = models.CharField(max_length=5) # MM/YY
-    cvv = models.CharField(max_length=3)
-    saldo = models.DecimalField(max_digits=10, decimal_places=2, default=50000.00) # Saldo inicial ficticio
-    usuario_dueño = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mis_tarjetas', null=True, blank=True)
-
-    def __str__(self):
-        return f"Tarjeta terminada en {self.numero[-4:]} - Saldo: ${self.saldo}"
 
 class Tarjeta(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tarjetas')
