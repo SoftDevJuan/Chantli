@@ -15,7 +15,7 @@ export default defineConfig({
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone', // <--- ESTO OCULTA LA BARRA DEL NAVEGADOR
-        orientation: 'portrait', // Bloquea la app en vertical (opcional)
+        //orientation: 'portrait', // Bloquea la app en vertical (opcional)
         start_url: '/',
         icons: [
           {
