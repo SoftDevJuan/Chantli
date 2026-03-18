@@ -19,17 +19,17 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'pwa-192x192.png', // Necesitas crear esta imagen
+            src: 'chantli-192x192.png', // Necesitas crear esta imagen
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png', // Necesitas crear esta imagen
+            src: 'chantli-512x512.png', // Necesitas crear esta imagen
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'chantli-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable' // Para iconos adaptables de Android
