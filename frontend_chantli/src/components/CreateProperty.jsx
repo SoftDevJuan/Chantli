@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, UploadCloud, MapPin, Type, X, Check, Wifi, Tv, Coffee, Car, Wind, Search, Loader2, Home as HomeIcon, } from 'lucide-react';
+import { ArrowLeft, UploadCloud, MapPin, Type, X, Check, Wifi, Tv, Coffee, Car, Wind, Search, Loader2, Plus, Home as HomeIcon } from 'lucide-react';
 
 // --- IMPORTACIONES GOOGLE MAPS ---
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
@@ -53,7 +53,7 @@ const CreateProperty = () => {
   const [markerPosition, setMarkerPosition] = useState(null); // Ubicación exacta {lat, lng}
   const [searchingMap, setSearchingMap] = useState(false);
 
-  // Validación de Permisos (Igual que antes)
+  // Validación de Permisos
   useEffect(() => {
     const checkPermissions = async () => {
         const token = localStorage.getItem('chantli_token');
@@ -69,10 +69,22 @@ const CreateProperty = () => {
     checkPermissions();
   }, [navigate]);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  // --- NUEVA LÓGICA DE MANEJO DE CAMBIOS (PREVIENE NEGATIVOS) ---
+  const handleChange = (e) => {
+      const { name, value } = e.target;
+      
+      // Validación especial para el precio: no permitir valores menores a 0
+      if (name === 'precio') {
+          if (Number(value) < 0) {
+              setFormData({ ...formData, [name]: '' });
+              return;
+          }
+      }
+      
+      setFormData({ ...formData, [name]: value });
+  };
 
   // --- FUNCIONES GOOGLE MAPS ---
-  
   const onLoad = useCallback(function callback(map) {
     setMap(map);
   }, []);
@@ -114,15 +126,14 @@ const CreateProperty = () => {
       setMarkerPosition({ lat, lng });
   };
 
-  // 3. CLIC EN EL MAPA (Opcional, si quieres que al dar clic se mueva el pin)
+  // 3. CLIC EN EL MAPA 
   const onMapClick = (e) => {
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
       setMarkerPosition({ lat, lng });
   };
 
-
-  // --- MANEJO DE IMÁGENES Y AMENIDADES (Igual que antes) ---
+  // --- MANEJO DE IMÁGENES Y AMENIDADES ---
   const toggleAmenity = (id) => selectedAmenities.includes(id) ? setSelectedAmenities(p => p.filter(i => i !== id)) : setSelectedAmenities(p => [...p, id]);
   const handlePortadaChange = (e) => { const f = e.target.files[0]; if(f) { setPortada(f); setPreviewPortada(URL.createObjectURL(f)); } };
   const handleGaleriaChange = (e) => { const files = Array.from(e.target.files); setGaleria(p => [...p, ...files]); setPreviewsGaleria(p => [...p, ...files.map(f => URL.createObjectURL(f))]); };
@@ -167,69 +178,88 @@ const CreateProperty = () => {
   if (verifying) return <div className="min-h-screen flex items-center justify-center bg-gray-50">Cargando...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20 font-sans">
       
-      <div className="bg-white px-4 py-3 shadow-sm sticky top-0 z-20 flex items-center">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100">
+      <div className="bg-white/90 backdrop-blur-md px-4 py-3 shadow-sm sticky top-0 z-30 flex items-center border-b border-gray-100">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition active:scale-95">
           <ArrowLeft className="h-6 w-6 text-gray-700" />
         </button>
         <div 
-                onClick={() => navigate('/home')} 
-                className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition"
-                title="Ir a Inicio"
-            >
-                <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
-                <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
-                    Chantli
-                </span>
-            </div>
-        <h1 className="ml-2 text-lg font-bold text-gray-900">Publicar Espacio</h1>
+            onClick={() => navigate('/home')} 
+            className="flex items-center gap-1.5 justify-center px-3 pr-4 cursor-pointer group transition border-l border-gray-200 ml-2 pl-4"
+            title="Ir a Inicio"
+        >
+            <HomeIcon strokeWidth={1.5} className="h-5 w-5 text-brand-600 group-hover:scale-105 transition-transform" />
+            <span className="font-logo text-lg tracking-[0.15em] text-gray-900 group-hover:text-brand-700 transition uppercase pt-0.5">
+                Chantli
+            </span>
+        </div>
+        <h1 className="ml-auto mr-2 text-lg font-bold text-gray-900">Publicar Espacio</h1>
       </div>
 
-      <div className="p-4 max-w-2xl mx-auto space-y-8">
+      <div className="p-4 max-w-2xl mx-auto space-y-8 mt-4">
         <form onSubmit={handleSubmit} className="space-y-8">
           
           {/* FOTOS */}
-          <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+          <section className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
               <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <UploadCloud className="h-4 w-4 text-brand-600" /> Fotografías
               </h3>
               {/* Portada */}
               <div className="mb-4">
-                <div className="relative h-56 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 overflow-hidden hover:border-brand-400 transition-colors group">
-                  {previewPortada ? <img src={previewPortada} className="w-full h-full object-cover" /> : <div className="flex flex-col items-center justify-center h-full text-gray-400"><UploadCloud className="h-8 w-8 mb-2" /><span className="text-xs">Subir Portada</span></div>}
+                <div className="relative h-56 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 overflow-hidden hover:border-brand-400 transition-colors group">
+                  {previewPortada ? <img src={previewPortada} className="w-full h-full object-cover" alt="Portada" /> : <div className="flex flex-col items-center justify-center h-full text-gray-400"><UploadCloud className="h-8 w-8 mb-2 group-hover:text-brand-500 transition-colors" /><span className="text-xs font-medium">Subir Portada Principal</span></div>}
                   <input type="file" onChange={handlePortadaChange} accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" required />
                 </div>
               </div>
-              {/* Galería (Simplificada para no repetir código visual) */}
+              {/* Galería */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Galería</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Galería Adicional</label>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {previewsGaleria.map((src, index) => (
-                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200"><img src={src} className="w-full h-full object-cover" /><button type="button" onClick={() => removeFoto(index)} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1"><X className="h-3 w-3" /></button></div>
+                    <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 shadow-sm"><img src={src} className="w-full h-full object-cover" alt={`Galeria ${index}`} /><button type="button" onClick={() => removeFoto(index)} className="absolute top-1 right-1 bg-black/60 hover:bg-red-500 transition-colors text-white rounded-full p-1"><X className="h-3 w-3" /></button></div>
                   ))}
-                  <div className="relative aspect-square rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center hover:bg-gray-100 cursor-pointer"><UploadCloud className="h-6 w-6 text-gray-400" /><input type="file" multiple onChange={handleGaleriaChange} accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" /></div>
+                  <div className="relative aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center hover:bg-gray-100 hover:border-brand-300 transition-colors cursor-pointer"><Plus className="h-6 w-6 text-gray-400" /><input type="file" multiple onChange={handleGaleriaChange} accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" /></div>
                 </div>
               </div>
           </section>
 
           {/* DATOS BÁSICOS */}
-          <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+          <section className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-5">
             <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
                   <Type className="h-4 w-4 text-brand-600" /> Información Básica
             </h3>
             
             <div>
-                <label className="text-xs font-bold text-gray-500 uppercase">Título</label>
-                <input type="text" name="titulo" onChange={handleChange} required className="block w-full p-3 border border-gray-200 bg-gray-50 rounded-xl mt-1 focus:ring-2 focus:ring-brand-500 outline-none" />
+                <label className="text-xs font-bold text-gray-500 uppercase">Título del Anuncio</label>
+                <input 
+                    type="text" 
+                    name="titulo" 
+                    value={formData.titulo}
+                    onChange={handleChange} 
+                    required 
+                    className="block w-full p-3 border border-gray-200 bg-gray-50 rounded-xl mt-1 focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors outline-none font-medium text-gray-800" 
+                    placeholder="Ej. Cuarto amueblado cerca de CUCEI"
+                />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase">Precio Mensual</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">Precio Mensual <span className="text-brand-500">*</span></label>
                     <div className="relative mt-1">
-                        <span className="absolute left-3 top-3 text-gray-500 font-bold">$</span>
-                        <input type="number" name="precio" onChange={handleChange} required className="block w-full pl-7 p-3 border border-gray-200 bg-gray-50 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-800" />
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                        {/* --- AQUÍ ESTÁ EL INPUT CON LAS PROTECCIONES APLICADAS --- */}
+                        <input 
+                            type="number" 
+                            name="precio" 
+                            value={formData.precio}
+                            onChange={handleChange} 
+                            required 
+                            min="0"
+                            step="0.01"
+                            className="block w-full pl-8 p-3 border border-gray-200 bg-gray-50 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors outline-none font-extrabold text-gray-900" 
+                            placeholder="0.00"
+                        />
                     </div>
                 </div>
                 
@@ -244,38 +274,47 @@ const CreateProperty = () => {
                             onChange={handleChange} 
                             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), buscarDireccionGoogle())}
                             required 
-                            className="block w-full p-3 pr-12 border border-gray-200 bg-gray-50 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all" 
+                            className="block w-full p-3 pr-12 border border-gray-200 bg-gray-50 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors outline-none font-medium text-gray-800" 
                             placeholder="Calle, Número, Colonia, Ciudad" 
                         />
                         <button 
                             type="button"
                             onClick={buscarDireccionGoogle}
                             disabled={searchingMap}
-                            className="absolute right-2 top-2 p-1.5 bg-white border border-gray-200 rounded-lg text-brand-600 hover:bg-brand-50 shadow-sm transition-all active:scale-95"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white border border-gray-200 rounded-lg text-brand-600 hover:bg-brand-50 shadow-sm transition-all active:scale-95"
+                            title="Ubicar en el mapa"
                         >
                             {searchingMap ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                         </button>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1">Escribe la dirección y pulsa la lupa para ubicar en el mapa.</p>
+                    <p className="text-[10px] text-gray-400 mt-1.5 ml-1">Escribe la dirección y pulsa la lupa para ubicar el pin en el mapa.</p>
                 </div>
             </div>
 
             <div>
-                <label className="text-xs font-bold text-gray-500 uppercase">Descripción</label>
-                <textarea name="descripcion" onChange={handleChange} rows="4" required className="block w-full p-3 border border-gray-200 bg-gray-50 rounded-xl mt-1 outline-none resize-none"></textarea>
+                <label className="text-xs font-bold text-gray-500 uppercase">Descripción detallada</label>
+                <textarea 
+                    name="descripcion" 
+                    value={formData.descripcion}
+                    onChange={handleChange} 
+                    rows="4" 
+                    required 
+                    className="block w-full p-3 border border-gray-200 bg-gray-50 rounded-xl mt-1 focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors outline-none resize-none font-medium text-gray-800"
+                    placeholder="Describe el espacio, las reglas de convivencia y detalles importantes..."
+                ></textarea>
             </div>
           </section>
 
           {/* --- MAPA GOOGLE --- */}
-          <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative">
+          <section className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 relative">
              <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-brand-600" /> Ubicación en Google Maps
             </h3>
-            <p className="text-xs text-gray-500 mb-3">
-                {markerPosition ? "Puedes arrastrar el marcador rojo si la ubicación no es exacta." : "Usa la lupa de arriba para buscar la dirección."}
+            <p className="text-xs text-gray-500 mb-4">
+                {markerPosition ? "Puedes arrastrar el pin rojo si la ubicación no es exacta." : "Usa la lupa en la sección de arriba para buscar la dirección."}
             </p>
             
-            <div className="h-64 w-full rounded-xl overflow-hidden border border-gray-200 z-0 relative">
+            <div className="h-64 w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative shadow-inner">
                 {isLoaded ? (
                     <GoogleMap
                         mapContainerStyle={containerStyle}
@@ -299,31 +338,40 @@ const CreateProperty = () => {
                         )}
                     </GoogleMap>
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">Cargando Google Maps...</div>
+                    <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-400 text-sm font-medium flex-col gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin text-brand-300" />
+                        Cargando Mapa...
+                    </div>
                 )}
             </div>
 
             {markerPosition ? (
-                <div className="mt-3 bg-green-50 text-green-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between animate-fade-in">
-                    <span className="flex items-center"><Check className="h-4 w-4 mr-1.5" /> Coordenadas listas</span>
-                    <span className="font-mono opacity-75 text-[10px]">{markerPosition.lat.toFixed(6)}, {markerPosition.lng.toFixed(6)}</span>
+                <div className="mt-4 bg-green-50 text-green-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-between animate-fade-in border border-green-100">
+                    <span className="flex items-center"><Check className="h-5 w-5 mr-2" /> Coordenadas listas</span>
+                    <span className="font-mono opacity-75 text-xs">{markerPosition.lat.toFixed(6)}, {markerPosition.lng.toFixed(6)}</span>
                 </div>
             ) : (
-                <div className="mt-3 bg-red-50 text-red-600 px-3 py-2 rounded-lg text-xs font-bold flex items-center animate-pulse">
-                    <MapPin className="h-4 w-4 mr-1.5" /> Busca una dirección para fijar el mapa
+                <div className="mt-4 bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm font-bold flex items-center animate-pulse border border-red-100">
+                    <MapPin className="h-5 w-5 mr-2" /> Aún no has fijado la ubicación en el mapa
                 </div>
             )}
           </section>
 
           {/* AMENIDADES */}
-          <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-             <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2"><Wifi className="h-4 w-4 text-brand-600" /> Amenidades</h3>
-             <div className="grid grid-cols-2 gap-3">
+          <section className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
+             <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2"><Wifi className="h-4 w-4 text-brand-600" /> Servicios y Amenidades</h3>
+             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {AMENIDADES_OPTIONS.map((item) => {
                     const isSelected = selectedAmenities.includes(item.id);
                     return (
-                        <div key={item.id} onClick={() => toggleAmenity(item.id)} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none ${isSelected ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600 hover:border-brand-200'}`}>
-                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-brand-600 border-brand-600' : 'border-gray-300 bg-white'}`}>{isSelected && <Check className="h-3 w-3 text-white" />}</div>
+                        <div 
+                            key={item.id} 
+                            onClick={() => toggleAmenity(item.id)} 
+                            className={`flex items-center gap-3 p-3 rounded-2xl border-2 cursor-pointer transition-all select-none active:scale-95 ${isSelected ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm' : 'border-gray-100 bg-white text-gray-600 hover:border-brand-200 hover:bg-gray-50'}`}
+                        >
+                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-brand-600 border-brand-600' : 'border-gray-300 bg-white'}`}>
+                                {isSelected && <Check className="h-3 w-3 text-white" />}
+                            </div>
                             <span className="text-xs font-bold flex items-center gap-2">{item.icon}{item.label}</span>
                         </div>
                     );
@@ -331,14 +379,23 @@ const CreateProperty = () => {
             </div>
           </section>
 
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 z-20">
+          {/* BOTÓN SUBMIT (FLOTANTE) */}
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-40 pb-safe">
               <div className="max-w-2xl mx-auto">
-                <button type="submit" disabled={loading} className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl shadow-lg hover:bg-black transition disabled:opacity-70 active:scale-95 flex items-center justify-center gap-2">
-                    {loading ? 'Publicando...' : <>Publicar Propiedad <ArrowLeft className="h-4 w-4 rotate-180" /></>}
+                <button 
+                    type="submit" 
+                    disabled={loading} 
+                    className="w-full py-4 bg-brand-600 text-white font-extrabold text-lg rounded-2xl shadow-xl shadow-brand-200 hover:bg-brand-700 hover:scale-[1.02] transition-all disabled:opacity-70 disabled:hover:scale-100 active:scale-95 flex items-center justify-center gap-2"
+                >
+                    {loading ? (
+                        <><Loader2 className="h-5 w-5 animate-spin" /> Publicando espacio...</>
+                    ) : (
+                        <>Publicar Propiedad <Check className="h-5 w-5" /></>
+                    )}
                 </button>
               </div>
           </div>
-          <div className="h-10"></div> 
+          <div className="h-20"></div> {/* Espaciador inferior */}
         </form>
       </div>
     </div>
