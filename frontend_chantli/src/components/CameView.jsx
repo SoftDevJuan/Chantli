@@ -38,7 +38,8 @@ const GameView = () => {
             {/* ======================================================== */}
             {/* CONTENIDO PRINCIPAL: ZONA ARCADE                         */}
             {/* ======================================================== */}
-            <div className="max-w-5xl mx-auto p-4 sm:p-6 mt-4">
+            {/* CAMBIO 1: Ensanchamos el contenedor principal de max-w-5xl a max-w-[1100px] */}
+            <div className="max-w-[1100px] mx-auto p-4 sm:p-6 mt-4">
                 
                 {/* Título y Contexto */}
                 <div className="text-center mb-8">
@@ -53,17 +54,19 @@ const GameView = () => {
                 </div>
 
                 {/* Contenedor del Juego (Estilo Consola/Marco) */}
-                <div className="bg-gray-900 rounded-[2rem] p-2 sm:p-4 shadow-2xl relative mx-auto max-w-4xl border border-gray-800">
+                {/* CAMBIO 2: Ensanchamos el marco negro de max-w-4xl a max-w-[1020px] */}
+                <div className="bg-gray-900 rounded-[2rem] p-2 sm:p-4 shadow-2xl relative mx-auto max-w-[1020px] border border-gray-800">
                     
-                    {/* Barra decorativa superior (estilo ventana de software) */}
-                    <div className="absolute top-0 left-0 w-full h-8 bg-gray-800/80 rounded-t-[2rem] flex items-center justify-start px-5 gap-2">
+                    {/* Barra decorativa superior */}
+                    <div className="absolute top-0 left-0 w-full h-8 bg-gray-800/80 rounded-t-[2rem] flex items-center justify-start px-5 gap-2 z-10">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
                         <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
                         <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
                     </div>
                     
-                    {/* Pantalla del juego (Relación de aspecto 16:9) */}
-                    <div className="mt-8 aspect-video w-full bg-black rounded-xl overflow-hidden border-2 border-gray-800 relative shadow-inner">
+                    {/* Pantalla del juego (Relación de aspecto) */}
+                    {/* Quitamos aspect-video y le damos altura responsiva o altura fija */}
+                    <div className="mt-8 h-[600px] sm:h-[700px] md:h-[800px] w-full bg-black rounded-xl overflow-hidden border-2 border-gray-800 relative shadow-inner">
                         
                         {/* --- EL IFRAME QUE CARGA UNITY --- */}
                         <iframe 
@@ -71,9 +74,8 @@ const GameView = () => {
                             className="w-full h-full border-0 relative z-10"
                             title="Chantli Minigame"
                             allowFullScreen
-                            scrolling="no" /* <-- ESTO EVITA LAS BARRAS EN EL IFRAME */
-                            style={{ overflow: 'hidden' }}
-                            
+                            scrolling="no" /* <-- Evita barras de desplazamiento en el iframe */
+                            style={{ overflow: 'hidden', display: 'block' }}
                         ></iframe>
                         
                         {/* Fondo de carga (Se ve mientras el iframe carga) */}
